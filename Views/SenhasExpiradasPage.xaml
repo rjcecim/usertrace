@@ -1,0 +1,153 @@
+<Page
+    x:Class="UserTrace.Views.SenhasExpiradasPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:models="using:UserTrace.Models"
+    Background="Transparent">
+
+    <Grid Margin="32,28,32,24" RowSpacing="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Cabeçalho -->
+        <StackPanel Grid.Row="0" Spacing="2">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+                <FontIcon
+                    Glyph="&#xE121;"
+                    FontSize="22"
+                    Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                    VerticalAlignment="Center"/>
+                <TextBlock
+                    Text="Senhas Expiradas"
+                    Style="{StaticResource TitleTextBlockStyle}"
+                    VerticalAlignment="Center"/>
+            </StackPanel>
+            <TextBlock
+                Text="Busca senhas que expiram em 180 dias ou contas obrigadas a trocar no próximo logon."
+                Style="{StaticResource PageDescriptionStyle}"/>
+        </StackPanel>
+
+        <!-- Filtros + Buscar -->
+        <StackPanel Grid.Row="1" Spacing="12">
+            <ComboBox
+                x:Name="TipoBuscaCombo"
+                Header="Tipo de busca"
+                HorizontalAlignment="Left"
+                MinWidth="320"
+                SelectionChanged="TipoBuscaCombo_SelectionChanged">
+                <ComboBoxItem Content="Expirando em data específica" Tag="DataEspecifica"/>
+                <ComboBoxItem Content="Expirando em intervalo de datas" Tag="Intervalo"/>
+                <ComboBoxItem Content="Expirando hoje" Tag="Hoje"/>
+                <ComboBoxItem Content="Obrigado a trocar no próximo logon" Tag="ProximoLogon"/>
+            </ComboBox>
+
+            <StackPanel x:Name="PainelIntervalo" Orientation="Horizontal" Spacing="12" Visibility="Visible">
+                <DatePicker x:Name="DataInicioPicker" Header="Data de início" HorizontalAlignment="Left"/>
+                <DatePicker x:Name="DataFimPicker" Header="Data de fim" HorizontalAlignment="Left"/>
+            </StackPanel>
+            <StackPanel x:Name="PainelDataEspecifica" Orientation="Horizontal" Spacing="12" Visibility="Collapsed">
+                <DatePicker x:Name="DataEspecificaPicker" Header="Data" HorizontalAlignment="Left"/>
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button
+                    x:Name="BuscarButton"
+                    Style="{StaticResource AccentButtonStyle}"
+                    Click="BuscarButton_Click"
+                    MinWidth="110">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE721;" FontSize="14"/>
+                        <TextBlock Text="Buscar"/>
+                    </StackPanel>
+                </Button>
+                <Button
+                    x:Name="LimparButton"
+                    Click="LimparButton_Click"
+                    MinWidth="90">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE894;" FontSize="14"/>
+                        <TextBlock Text="Limpar"/>
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </StackPanel>
+
+        <!-- Resultados -->
+        <Border Grid.Row="2" Style="{StaticResource MicaContentPanelStyle}">
+            <Grid>
+                <ProgressRing
+                    x:Name="LoadingRing"
+                    IsActive="False"
+                    Visibility="Collapsed"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Width="48" Height="48"/>
+
+                <Grid x:Name="ResultadosPanel" RowSpacing="0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="6" Margin="14,10,14,8">
+                        <FontIcon Glyph="&#xE77B;" FontSize="12"
+                                  Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                  VerticalAlignment="Center"/>
+                        <TextBlock x:Name="ContadorTextBlock"
+                                   Text="Escolha o tipo de busca e clique em Buscar."
+                                   Style="{StaticResource CaptionTextBlockStyle}"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    </StackPanel>
+                    <ListView
+                        x:Name="ResultadoListView"
+                        Grid.Row="1"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Padding="4,0,4,8"
+                        DoubleTapped="ResultadoListView_DoubleTapped">
+                        <ListView.ItemTemplate>
+                            <DataTemplate x:DataType="models:SenhaExpiraDisplay">
+                                <Grid ColumnSpacing="10" Padding="4,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border
+                                        Grid.Column="0"
+                                        Width="32" Height="32"
+                                        CornerRadius="16"
+                                        Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1"
+                                        VerticalAlignment="Center">
+                                        <FontIcon Glyph="&#xE121;" FontSize="14"
+                                                  Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                                                  HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center">
+                                        <TextBlock Text="{x:Bind DisplayName, Mode=OneWay}"
+                                                   Style="{StaticResource BodyStrongTextBlockStyle}"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="{x:Bind SamAccountName, Mode=OneWay}"
+                                                   Style="{StaticResource CaptionTextBlockStyle}"
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                   FontFamily="Cascadia Mono, Consolas"/>
+                                    </StackPanel>
+                                    <TextBlock Grid.Column="2" Text="{x:Bind DataExpira, Mode=OneWay}"
+                                               Style="{StaticResource CaptionTextBlockStyle}"
+                                               Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                                               VerticalAlignment="Center"
+                                               FontFamily="Cascadia Mono, Consolas"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                </Grid>
+            </Grid>
+        </Border>
+    </Grid>
+
+</Page>

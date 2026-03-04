@@ -1,0 +1,387 @@
+<Page
+    x:Class="UserTrace.Views.SobrePage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Background="Transparent">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="32,28,32,32" Spacing="16" MaxWidth="760">
+
+            <!--
+                MICA BEST PRACTICE #12 — Hero section sem card.
+                O cabeçalho principal flutua diretamente sobre o Mica,
+                criando contraste de profundidade com os cards abaixo.
+            -->
+            <StackPanel Spacing="4" Margin="0,0,0,8">
+                <TextBlock
+                    Text="UserTrace"
+                    Style="{StaticResource TitleLargeTextBlockStyle}"/>
+                <TextBlock
+                    Text="Consulta de usuários e grupos no Active Directory."
+                    Style="{StaticResource BodyTextBlockStyle}"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+            </StackPanel>
+
+            <!--
+                MICA BEST PRACTICE #13 — Seções como cards elevados (Layer 2).
+                Cada seção é um Border com CardBackgroundFillColorDefaultBrush.
+                Isso cria hierarquia visual clara: fundo Mica → cards → conteúdo.
+            -->
+
+            <!-- Card: Descrição -->
+            <Border Style="{StaticResource MicaCardStyle}">
+                <StackPanel Spacing="8">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <FontIcon
+                            Glyph="&#xE946;"
+                            FontSize="18"
+                            Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                        <TextBlock
+                            Text="O que é o UserTrace?"
+                            Style="{StaticResource SubtitleTextBlockStyle}"
+                            VerticalAlignment="Center"/>
+                    </StackPanel>
+                <TextBlock
+                    TextWrapping="Wrap"
+                    Style="{StaticResource BodyTextBlockStyle}"
+                    Text="Ferramenta desktop para consulta de usuários e grupos no Active Directory. Busca por login ou nome, lista grupos e membros, senhas expirando ou obrigadas a trocar no próximo logon, contas bloqueadas e contas desativadas. Dois cliques em um usuário (Senhas Expiradas, Contas Bloqueadas ou Contas Desativadas) abrem os detalhes na Busca por Login. Sem processos externos — compatível com EDRs corporativos."/>
+                </StackPanel>
+            </Border>
+
+            <!-- Card: Como usar -->
+            <Border Style="{StaticResource MicaCardStyle}">
+                <StackPanel Spacing="12">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <FontIcon
+                            Glyph="&#xE82D;"
+                            FontSize="18"
+                            Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                        <TextBlock
+                            Text="Como usar"
+                            Style="{StaticResource SubtitleTextBlockStyle}"
+                            VerticalAlignment="Center"/>
+                    </StackPanel>
+
+                    <StackPanel Spacing="8">
+                        <TextBlock
+                            TextWrapping="Wrap"
+                            Style="{StaticResource CaptionTextBlockStyle}"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Text="A janela abre maximizada. Use os itens do menu para cada funcionalidade. Em listas de usuários (Senhas Expiradas, Contas Bloqueadas, Contas Desativadas), dê dois cliques em um nome para abrir os detalhes na Busca por Login."/>
+                    </StackPanel>
+
+                    <Grid ColumnSpacing="12" RowSpacing="12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Sub-card 1: Busca por Login -->
+                        <Border
+                            Grid.Column="0"
+                            Grid.Row="0"
+                            Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="1"
+                            CornerRadius="6"
+                            Padding="14,12">
+                            <StackPanel Spacing="6">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon Glyph="&#xE77B;" FontSize="14"
+                                              Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                                    <TextBlock
+                                        Text="Busca por Login"
+                                        Style="{StaticResource BodyStrongTextBlockStyle}"
+                                        VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <TextBlock
+                                    TextWrapping="Wrap"
+                                    Style="{StaticResource CaptionTextBlockStyle}"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    Text="Informe o sAMAccountName e clique em Buscar. Os detalhes equivalem ao net user /domain."/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Sub-card 2: Busca por Nome -->
+                        <Border
+                            Grid.Column="1"
+                            Grid.Row="0"
+                            Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="1"
+                            CornerRadius="6"
+                            Padding="14,12">
+                            <StackPanel Spacing="6">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon Glyph="&#xE721;" FontSize="14"
+                                              Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                                    <TextBlock
+                                        Text="Busca por Nome"
+                                        Style="{StaticResource BodyStrongTextBlockStyle}"
+                                        VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <TextBlock
+                                    TextWrapping="Wrap"
+                                    Style="{StaticResource CaptionTextBlockStyle}"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    Text="Digite parte do nome para listar correspondências. Selecione um para ver os detalhes."/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Sub-card 3: Busca por Grupo -->
+                        <Border
+                            Grid.Column="0"
+                            Grid.Row="1"
+                            Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="1"
+                            CornerRadius="6"
+                            Padding="14,12">
+                            <StackPanel Spacing="6">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon Glyph="&#xE902;" FontSize="14"
+                                              Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                                    <TextBlock
+                                        Text="Busca por Grupo"
+                                        Style="{StaticResource BodyStrongTextBlockStyle}"
+                                        VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <TextBlock
+                                    TextWrapping="Wrap"
+                                    Style="{StaticResource CaptionTextBlockStyle}"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    Text="A lista de grupos carrega ao abrir. Use o filtro e Buscar para restringir; Limpar recarrega todos. Selecione grupo e membro para detalhes."/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Sub-card 4: Senhas Expiradas -->
+                        <Border
+                            Grid.Column="1"
+                            Grid.Row="1"
+                            Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="1"
+                            CornerRadius="6"
+                            Padding="14,12">
+                            <StackPanel Spacing="6">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon Glyph="&#xE121;" FontSize="14"
+                                              Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                                    <TextBlock
+                                        Text="Senhas Expiradas"
+                                        Style="{StaticResource BodyStrongTextBlockStyle}"
+                                        VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <TextBlock
+                                    TextWrapping="Wrap"
+                                    Style="{StaticResource CaptionTextBlockStyle}"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    Text="Escolha o tipo (data, intervalo, hoje, próximo logon) e Buscar. Dois cliques em um usuário abre os detalhes na Busca por Login."/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Sub-card 5: Contas Bloqueadas -->
+                        <Border
+                            Grid.Column="0"
+                            Grid.Row="2"
+                            Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="1"
+                            CornerRadius="6"
+                            Padding="14,12">
+                            <StackPanel Spacing="6">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon Glyph="&#xE72E;" FontSize="14"
+                                              Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                                    <TextBlock
+                                        Text="Contas Bloqueadas"
+                                        Style="{StaticResource BodyStrongTextBlockStyle}"
+                                        VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <TextBlock
+                                    TextWrapping="Wrap"
+                                    Style="{StaticResource CaptionTextBlockStyle}"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    Text="Lista contas bloqueadas por tentativa incorreta de senha. Lista carrega ao abrir. Dois cliques em um usuário abre os detalhes na Busca por Login."/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Sub-card 6: Contas Desativadas -->
+                        <Border
+                            Grid.Column="1"
+                            Grid.Row="2"
+                            Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="1"
+                            CornerRadius="6"
+                            Padding="14,12">
+                            <StackPanel Spacing="6">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon Glyph="&#xE711;" FontSize="14"
+                                              Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                                    <TextBlock
+                                        Text="Contas Desativadas"
+                                        Style="{StaticResource BodyStrongTextBlockStyle}"
+                                        VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <TextBlock
+                                    TextWrapping="Wrap"
+                                    Style="{StaticResource CaptionTextBlockStyle}"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    Text="Lista contas de usuário desativadas no AD. Lista carrega ao abrir. Dois cliques em um usuário abre os detalhes na Busca por Login."/>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- Card: Requisitos -->
+            <Border Style="{StaticResource MicaCardStyle}">
+                <StackPanel Spacing="12">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <FontIcon
+                            Glyph="&#xE7EF;"
+                            FontSize="18"
+                            Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                        <TextBlock
+                            Text="Requisitos"
+                            Style="{StaticResource SubtitleTextBlockStyle}"
+                            VerticalAlignment="Center"/>
+                    </StackPanel>
+
+                    <Grid ColumnSpacing="16" RowSpacing="10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="140"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition/>
+                            <RowDefinition/>
+                            <RowDefinition/>
+                            <RowDefinition/>
+                            <RowDefinition/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.Column="0"
+                            Text="Sistema"
+                            Style="{StaticResource BodyStrongTextBlockStyle}"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        <TextBlock Grid.Row="0" Grid.Column="1"
+                            Text="Windows 10 1809+ ou Windows 11"
+                            Style="{StaticResource BodyTextBlockStyle}"/>
+
+                        <TextBlock Grid.Row="1" Grid.Column="0"
+                            Text="Domínio"
+                            Style="{StaticResource BodyStrongTextBlockStyle}"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        <TextBlock Grid.Row="1" Grid.Column="1"
+                            Text="Máquina ingressada no Active Directory"
+                            Style="{StaticResource BodyTextBlockStyle}"/>
+
+                        <TextBlock Grid.Row="2" Grid.Column="0"
+                            Text="Permissões"
+                            Style="{StaticResource BodyStrongTextBlockStyle}"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        <TextBlock Grid.Row="2" Grid.Column="1"
+                            Text="Administrador local (UAC) + leitura de objetos no AD"
+                            Style="{StaticResource BodyTextBlockStyle}"/>
+
+                        <TextBlock Grid.Row="3" Grid.Column="0"
+                            Text="Conectividade"
+                            Style="{StaticResource BodyStrongTextBlockStyle}"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        <TextBlock Grid.Row="3" Grid.Column="1"
+                            Text="Acesso ao DC nas portas 389 (LDAP) e RPC"
+                            Style="{StaticResource BodyTextBlockStyle}"/>
+
+                        <TextBlock Grid.Row="4" Grid.Column="0"
+                            Text="Efeito Mica"
+                            Style="{StaticResource BodyStrongTextBlockStyle}"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        <TextBlock Grid.Row="4" Grid.Column="1"
+                            Text="Disponível apenas no Windows 11 (fallback automático no Windows 10)."
+                            Style="{StaticResource BodyTextBlockStyle}"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- Card: Tecnologias -->
+            <Border Style="{StaticResource MicaCardStyle}">
+                <StackPanel Spacing="12">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <FontIcon
+                            Glyph="&#xE943;"
+                            FontSize="18"
+                            Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                        <TextBlock
+                            Text="Tecnologias"
+                            Style="{StaticResource SubtitleTextBlockStyle}"
+                            VerticalAlignment="Center"/>
+                    </StackPanel>
+
+                    <!-- Chips de tecnologia usando ItemsControl + WrapGrid (WinUI 3 nativo) -->
+                    <ItemsControl>
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <ItemsWrapGrid
+                                    Orientation="Horizontal"
+                                    MaximumRowsOrColumns="10"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border
+                                    Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="4"
+                                    Padding="10,4"
+                                    Margin="0,0,8,8">
+                                    <TextBlock
+                                        Text="{Binding}"
+                                        Style="{StaticResource CaptionTextBlockStyle}"
+                                        FontFamily="Cascadia Mono, Consolas"/>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                        <x:String>.NET 10</x:String>
+                        <x:String>WinUI 3</x:String>
+                        <x:String>Windows App SDK 1.8</x:String>
+                        <x:String>WinUIEx 2.9</x:String>
+                        <x:String>Unpackaged</x:String>
+                        <x:String>Self-contained EXE</x:String>
+                        <x:String>Mica Backdrop</x:String>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <!-- Card: Segurança — InfoBar integrada ao card -->
+            <Border Style="{StaticResource MicaCardStyle}">
+                <StackPanel Spacing="12">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <FontIcon
+                            Glyph="&#xE72E;"
+                            FontSize="18"
+                            Foreground="{ThemeResource SystemFillColorSuccessBrush}"/>
+                        <TextBlock
+                            Text="Compatível com EDR corporativo"
+                            Style="{StaticResource SubtitleTextBlockStyle}"
+                            VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <TextBlock
+                        TextWrapping="Wrap"
+                        Style="{StaticResource BodyTextBlockStyle}"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Text="Nenhum processo filho é criado. Toda comunicação com o AD ocorre via chamadas de API diretas (netapi32.dll e LDAP) dentro do próprio processo, garantindo compatibilidade com Fortinet, CrowdStrike, SentinelOne e similares."/>
+                </StackPanel>
+            </Border>
+
+        </StackPanel>
+    </ScrollViewer>
+
+</Page>
