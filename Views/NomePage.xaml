@@ -1,0 +1,203 @@
+<Page
+    x:Class="UserTrace.Views.NomePage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:UserTrace.Views"
+    xmlns:models="using:UserTrace.Models"
+    Background="Transparent">
+
+    <Grid Margin="32,28,32,24" RowSpacing="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Cabeçalho -->
+        <StackPanel Grid.Row="0" Spacing="2">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+                <FontIcon
+                    Glyph="&#xE721;"
+                    FontSize="22"
+                    Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                    VerticalAlignment="Center"/>
+                <TextBlock
+                    Text="Busca por Nome"
+                    Style="{StaticResource TitleTextBlockStyle}"
+                    VerticalAlignment="Center"/>
+            </StackPanel>
+            <TextBlock
+                Text="Pesquisa usuários no Active Directory por nome parcial."
+                Style="{StaticResource PageDescriptionStyle}"/>
+        </StackPanel>
+
+        <!-- Barra de busca -->
+        <Grid Grid.Row="1" ColumnSpacing="8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <TextBox
+                x:Name="NomeTextBox"
+                Grid.Column="0"
+                PlaceholderText="Digite parte do nome (ex.: Silva)"
+                KeyDown="NomeTextBox_KeyDown"
+                IsSpellCheckEnabled="False"
+                FontFamily="Cascadia Mono, Consolas"
+                VerticalAlignment="Center">
+                <TextBox.Header>
+                    <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,0,4">
+                        <FontIcon Glyph="&#xE77B;" FontSize="12"
+                                  Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                  VerticalAlignment="Center"/>
+                        <TextBlock Text="Nome parcial (displayName, givenName, sn)"
+                                   Style="{StaticResource CaptionTextBlockStyle}"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    </StackPanel>
+                </TextBox.Header>
+            </TextBox>
+
+            <Button
+                x:Name="BuscarButton"
+                Grid.Column="1"
+                Style="{StaticResource AccentButtonStyle}"
+                Click="BuscarButton_Click"
+                VerticalAlignment="Bottom"
+                MinWidth="110">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <FontIcon Glyph="&#xE721;" FontSize="14"/>
+                    <TextBlock Text="Buscar"/>
+                </StackPanel>
+            </Button>
+
+            <Button
+                x:Name="LimparButton"
+                Grid.Column="2"
+                Click="LimparButton_Click"
+                VerticalAlignment="Bottom"
+                MinWidth="90">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <FontIcon Glyph="&#xE894;" FontSize="14"/>
+                    <TextBlock Text="Limpar"/>
+                </StackPanel>
+            </Button>
+        </Grid>
+
+        <!-- Painel dividido: lista + detalhes -->
+        <Grid Grid.Row="2" ColumnSpacing="12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="300" MinWidth="220"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Card: lista de usuários -->
+            <Border Grid.Column="0" Style="{StaticResource MicaContentPanelStyle}">
+                <Grid>
+                    <ProgressRing
+                        x:Name="ListaLoadingRing"
+                        IsActive="False"
+                        Visibility="Collapsed"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Width="40" Height="40"/>
+
+                    <Grid x:Name="ListaPanel" RowSpacing="0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Contador com ícone -->
+                        <StackPanel
+                            Grid.Row="0"
+                            Orientation="Horizontal"
+                            Spacing="6"
+                            Margin="14,10,14,8">
+                            <FontIcon
+                                x:Name="ContadorIcon"
+                                Glyph="&#xE77B;"
+                                FontSize="12"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                VerticalAlignment="Center"/>
+                            <TextBlock
+                                x:Name="ContadorTextBlock"
+                                Text="Aguardando busca."
+                                Style="{StaticResource CaptionTextBlockStyle}"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        </StackPanel>
+
+                        <ListView
+                            x:Name="ResultadoListView"
+                            Grid.Row="1"
+                            SelectionChanged="ResultadoListView_SelectionChanged"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Padding="4,0,4,8">
+                            <ListView.ItemTemplate>
+                                <DataTemplate x:DataType="models:SearchResultItem">
+                                    <Grid ColumnSpacing="10" Padding="4,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- Mini avatar -->
+                                        <Border
+                                            Grid.Column="0"
+                                            Width="32" Height="32"
+                                            CornerRadius="16"
+                                            Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                            BorderThickness="1"
+                                            VerticalAlignment="Center">
+                                            <FontIcon
+                                                Glyph="&#xE77B;"
+                                                FontSize="14"
+                                                Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"/>
+                                        </Border>
+
+                                        <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center">
+                                            <TextBlock
+                                                Text="{x:Bind DisplayName}"
+                                                Style="{StaticResource BodyStrongTextBlockStyle}"
+                                                TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock
+                                                Text="{x:Bind SamAccountName}"
+                                                Style="{StaticResource CaptionTextBlockStyle}"
+                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                FontFamily="Cascadia Mono, Consolas"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                        </ListView>
+                    </Grid>
+                </Grid>
+            </Border>
+
+            <!-- Separador Fluent -->
+            <Rectangle Grid.Column="1" Style="{StaticResource FluentDividerStyle}"/>
+
+            <!-- Card: detalhes do usuário selecionado -->
+            <Border Grid.Column="2" Style="{StaticResource MicaContentPanelStyle}">
+                <Grid>
+                    <ProgressRing
+                        x:Name="DetalhesLoadingRing"
+                        IsActive="False"
+                        Visibility="Collapsed"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Width="48" Height="48"/>
+
+                    <local:UserInfoPanel x:Name="DetalhesPanel"/>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+
+</Page>

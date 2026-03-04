@@ -1,0 +1,133 @@
+<winuiex:WindowEx
+    x:Class="UserTrace.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:UserTrace"
+    xmlns:winuiex="using:WinUIEx"
+    Title="UserTrace">
+
+    <!--
+        MICA BEST PRACTICE #1 — Background da raiz DEVE ser Transparent.
+        Qualquer cor sólida aqui bloqueia o Mica de aparecer.
+    -->
+    <Grid Background="Transparent">
+        <NavigationView
+            x:Name="NavView"
+            IsBackButtonVisible="Collapsed"
+            IsSettingsVisible="False"
+            PaneDisplayMode="Left"
+            OpenPaneLength="220"
+            SelectionChanged="NavView_SelectionChanged"
+            IsTitleBarAutoPaddingEnabled="False">
+
+            <!--
+                MICA BEST PRACTICE #2 — Header customizado dentro do NavigationView.
+                Isso permite que o PaneHeader fique alinhado com a TitleBar,
+                criando o efeito de "painel lateral integrado" característico
+                de apps como Settings e Files do Windows 11.
+            -->
+            <NavigationView.PaneHeader>
+                <StackPanel Margin="16,48,16,12" Spacing="6">
+                    <!-- Logo + nome do app -->
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <Border
+                            Width="32" Height="32"
+                            CornerRadius="8"
+                            Background="{ThemeResource AccentFillColorDefaultBrush}">
+                            <FontIcon
+                                Glyph="&#xE774;"
+                                FontSize="16"
+                                Foreground="White"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"/>
+                        </Border>
+                        <StackPanel VerticalAlignment="Center" Spacing="1">
+                            <TextBlock
+                                Text="UserTrace"
+                                Style="{StaticResource BodyStrongTextBlockStyle}"
+                                Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                            <TextBlock
+                                Text="Active Directory"
+                                Style="{StaticResource CaptionTextBlockStyle}"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        </StackPanel>
+                    </StackPanel>
+                </StackPanel>
+            </NavigationView.PaneHeader>
+
+            <NavigationView.MenuItems>
+                <NavigationViewItem
+                    x:Name="NavItemLogin"
+                    Content="Busca por Login"
+                    Tag="Login">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE77B;"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+
+                <NavigationViewItem
+                    x:Name="NavItemNome"
+                    Content="Busca por Nome"
+                    Tag="Nome">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE721;"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+
+                <NavigationViewItem
+                    x:Name="NavItemGrupo"
+                    Content="Busca por Grupo"
+                    Tag="Grupo">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE902;"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+
+                <NavigationViewItem
+                    x:Name="NavItemSenhasExpiradas"
+                    Content="Senhas Expiradas"
+                    Tag="SenhasExpiradas">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE121;"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+
+                <NavigationViewItem
+                    x:Name="NavItemContasBloqueadas"
+                    Content="Contas Bloqueadas"
+                    Tag="ContasBloqueadas">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE72E;"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+
+                <NavigationViewItem
+                    x:Name="NavItemContasDesativadas"
+                    Content="Contas Desativadas"
+                    Tag="ContasDesativadas">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE711;"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+            </NavigationView.MenuItems>
+
+            <NavigationView.FooterMenuItems>
+                <NavigationViewItem
+                    x:Name="NavItemSobre"
+                    Content="Sobre"
+                    Tag="Sobre">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE946;"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+            </NavigationView.FooterMenuItems>
+
+            <!--
+                MICA BEST PRACTICE #3 — Frame com Background Transparent.
+                O conteúdo das Pages "flutua" sobre o Mica sem bloquear o efeito.
+            -->
+            <Frame x:Name="ContentFrame" Background="Transparent"/>
+        </NavigationView>
+    </Grid>
+
+</winuiex:WindowEx>
