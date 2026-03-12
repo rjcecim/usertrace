@@ -1,6 +1,7 @@
-using Microsoft.UI;
+using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Media;
 using UserTrace.Models;
 
@@ -11,6 +12,46 @@ public sealed partial class UserInfoPanel : UserControl
     public UserInfoPanel()
     {
         InitializeComponent();
+    }
+
+    /// <summary>
+    /// Habilita seleção de texto em todos os TextBlocks do painel (para Ctrl+C e botão direito → Copiar).
+    /// Chamado quando os dados do usuário são exibidos, garantindo que funcione também ao navegar
+    /// por Senhas Expiradas / Contas Bloqueadas / Contas Desativadas (dados carregados depois).
+    /// </summary>
+    private void EnableTextSelectionInPanel()
+    {
+        // Passa 1: a partir do ContentPanel (onde estão os dados do usuário), garantindo os TextBlocks dos cards.
+        EnableTextSelectionInSubtree(ContentPanel);
+        // Passa 2: a partir da raiz do controle, para pegar qualquer texto (ex.: se a árvore do UserControl for diferente).
+        EnableTextSelectionInSubtree(this);
+        // Passa 3: após o layout, para quando a navegação vem de Senhas Expiradas / Contas Bloqueadas / Contas Desativadas.
+        DispatcherQueue.TryEnqueue(DispatcherQueuePriority.Low, () =>
+        {
+            EnableTextSelectionInSubtree(ContentPanel);
+            EnableTextSelectionInSubtree(this);
+        });
+    }
+
+    private static void EnableTextSelectionInSubtree(DependencyObject? root)
+    {
+        if (root == null) return;
+        int count = VisualTreeHelper.GetChildrenCount(root);
+        for (int i = 0; i < count; i++)
+        {
+            var child = VisualTreeHelper.GetChild(root, i);
+            if (child is TextBlock tb && !IsInsideButton(tb))
+                tb.IsTextSelectionEnabled = true;
+            EnableTextSelectionInSubtree(child);
+        }
+    }
+
+    private static bool IsInsideButton(DependencyObject? element)
+    {
+        for (var parent = VisualTreeHelper.GetParent(element); parent != null; parent = VisualTreeHelper.GetParent(parent))
+            if (parent is ButtonBase)
+                return true;
+        return false;
     }
 
     public void ShowEmpty(string message = "Informe um login e clique em Buscar.")
@@ -76,6 +117,9 @@ public sealed partial class UserInfoPanel : UserControl
 
         EmptyState.Visibility   = Visibility.Collapsed;
         ContentPanel.Visibility = Visibility.Visible;
+
+        // Garante seleção de texto no painel (principalmente quando viemos de Senhas Expiradas / Contas Bloqueadas / Contas Desativadas).
+        EnableTextSelectionInPanel();
     }
 
     /// <summary>
