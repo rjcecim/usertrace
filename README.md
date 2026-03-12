@@ -49,6 +49,11 @@ Lista de contas de usuário desativadas no Active Directory (userAccountControl 
 - ⚡ Operações assíncronas — UI nunca trava durante consultas ao AD
 - 👆 **Dois cliques** em um usuário (Senhas Expiradas, Contas Bloqueadas ou Contas Desativadas) abre os detalhes na Busca por Login
 
+### 📋 Seleção e cópia de texto
+
+- **Onde pode copiar:** no conteúdo das páginas — detalhes do usuário (nome, login, grupos, datas, etc.), listas de resultados, descrições e textos dos cards. Selecione com o mouse e use **Ctrl+C** ou **botão direito → Copiar**.
+- **Onde não pode copiar:** itens do menu lateral (Busca por Login, Busca por Nome, etc.), ícones do menu e texto dentro de botões (Buscar, Limpar, Atualizar). Esses elementos não permitem seleção para manter a interface limpa e evitar cópia acidental de rótulos.
+
 ---
 
 ## ⚙️ Requisitos

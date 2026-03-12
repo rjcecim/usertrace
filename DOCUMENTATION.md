@@ -8,10 +8,11 @@
 4. [Models](#4-models)
 5. [Services](#5-services)
 6. [Views](#6-views)
-7. [Fluxo de Dados](#7-fluxo-de-dados)
-8. [Sistema Visual Mica](#8-sistema-visual-mica)
-9. [Build e Publicação](#9-build-e-publicação)
-10. [Segurança e Permissões](#10-segurança-e-permissões)
+7. [Seleção de Texto e Cópia](#7-seleção-de-texto-e-cópia)
+8. [Fluxo de Dados](#8-fluxo-de-dados)
+9. [Sistema Visual Mica](#9-sistema-visual-mica)
+10. [Build e Publicação](#10-build-e-publicação)
+11. [Segurança e Permissões](#11-segurança-e-permissões)
 
 ---
 
@@ -299,7 +300,12 @@ Janela principal herdando de `WindowEx` (WinUIEx).
 - `MicaBackdrop { Kind = MicaKind.Base }` — efeito Mica ativado
 - Botões da TitleBar com fundo transparente (`ButtonBackgroundColor = Colors.Transparent`)
 - Ícone: `AppWindow.SetIcon(@"Assets\app.ico")`
-- `ContentFrame.Navigated`: quando a página de destino é `LoginPage` com parâmetro (login), `NavView.SelectedItem` é sincronizado para "Busca por Login"; em `NavView_SelectionChanged`, se a página atual já for a do item selecionado, não navega de novo (evita sobrescrever o parâmetro)
+- `ContentFrame.Navigated`: quando a página de destino é `LoginPage` com parâmetro (login), `NavView.SelectedItem` é sincronizado para "Busca por Login"; em `NavView_SelectionChanged`, se a página atual já for a do item selecionado, não navega de novo (evita sobrescrever o parâmetro). No mesmo evento, a **seleção de texto** é habilitada apenas no conteúdo da página (método `EnableTextSelectionInPage(page)`); o menu lateral (NavView) **não** recebe ativação de seleção, para que itens do menu e ícones Unicode não sejam copiáveis.
+
+**Seleção de texto (MainWindow):**
+- `EnableTextSelectionInPage(DependencyObject root)` — percorre a árvore visual e define `IsTextSelectionEnabled = true` em todos os `TextBlock`, **exceto** os que estão dentro de um `ButtonBase` (botões como Buscar, Limpar, Atualizar permanecem sem seleção).
+- `IsInsideButton(DependencyObject element)` — sobe a árvore com `VisualTreeHelper.GetParent` e retorna `true` se algum ancestral for `ButtonBase` (namespace `Microsoft.UI.Xaml.Controls.Primitives`), cobrindo `Button`, `HyperlinkButton`, `RepeatButton`, `ToggleButton`, etc.
+- A ativação roda no `Loaded` da página e é reenfileirada com `DispatcherQueuePriority.Low` para pegar itens de lista virtualizados (ListView).
 
 **Navegação:**
 
@@ -487,6 +493,12 @@ private void SetBadge(Border badge, FontIcon icon, TextBlock label,
 - `positiveGood = false`: vermelho quando `value = true`, verde quando `false`
 - Usa `SystemFillColorSuccessBrush` (verde) e `SystemFillColorCriticalBrush` (vermelho)
 
+**Seleção de texto (UserInfoPanel):**
+- Ao exibir dados do usuário, `ShowUser(UserInfo u)` chama `EnableTextSelectionInPanel()` no final, para que o usuário possa selecionar e copiar (Ctrl+C ou botão direito → Copiar) qualquer texto dos cards — inclusive quando a tela foi aberta por duplo clique em Senhas Expiradas, Contas Bloqueadas ou Contas Desativadas (dados carregados de forma assíncrona).
+- `EnableTextSelectionInPanel()` — executa `EnableTextSelectionInSubtree(ContentPanel)` e `EnableTextSelectionInSubtree(this)`, e agenda nova passagem com `DispatcherQueue.TryEnqueue(DispatcherQueuePriority.Low, ...)` para garantir que itens já renderizados recebam `IsTextSelectionEnabled = true`.
+- `EnableTextSelectionInSubtree(DependencyObject root)` — percorre a árvore e define `IsTextSelectionEnabled = true` apenas em `TextBlock` que **não** estejam dentro de um `ButtonBase` (mesma lógica de `IsInsideButton` usada no MainWindow).
+- Estilos `FieldLabelStyle` e `FieldValueStyle` no XAML do painel incluem `IsTextSelectionEnabled="True"` para reforçar a seleção nos campos de rótulo e valor.
+
 ---
 
 ### `SobrePage`
@@ -501,7 +513,34 @@ Página estática com informações do aplicativo, organizada em cards Mica:
 
 ---
 
-## 7. Fluxo de Dados
+## 7. Seleção de Texto e Cópia
+
+O app permite selecionar e copiar texto **apenas no conteúdo das páginas** (detalhes do usuário, listas, cards), usando o mouse para selecionar e **Ctrl+C** ou **botão direito → Copiar** para colar. Itens do menu lateral e texto dentro de botões não são selecionáveis.
+
+### Onde a seleção é habilitada
+
+- **Conteúdo do Frame:** texto exibido nas páginas (Login, Nome, Grupo, Senhas Expiradas, Contas Bloqueadas, Contas Desativadas, Sobre) — nomes, logins, datas, grupos, descrições, etc.
+- **UserInfoPanel:** todos os campos dos cards (Identidade, Status, Senha, Logon, Grupos) recebem `IsTextSelectionEnabled = true` quando `ShowUser()` é chamado, incluindo quando o usuário chega à tela por duplo clique em uma lista (dados carregados de forma assíncrona).
+
+### Onde a seleção não é habilitada
+
+- **NavigationView (menu lateral):** `EnableTextSelectionInPage(NavView)` **não** é chamado; itens como "Busca por Login", "Busca por Nome", "Senhas Expiradas", etc., e os ícones Unicode (FontIcon) permanecem sem seleção.
+- **Botões:** qualquer `TextBlock` que tenha um ancestral do tipo `ButtonBase` (Button, HyperlinkButton, RepeatButton, ToggleButton) é ignorado pelo método que ativa seleção — assim, rótulos como "Buscar", "Limpar", "Atualizar" não podem ser selecionados.
+
+### Implementação
+
+| Local | Método / momento | Comportamento |
+|-------|------------------|----------------|
+| MainWindow | `ContentFrame_Navigated` → `EnableTextSelectionInPage(page)` | Roda no `Loaded` da página e em passagem com `DispatcherQueuePriority.Low`; não percorre o NavView. |
+| MainWindow | `EnableTextSelectionInPage(root)` | Percorre a árvore com `VisualTreeHelper`; em cada `TextBlock`, só define `IsTextSelectionEnabled = true` se `!IsInsideButton(tb)`. |
+| MainWindow | `IsInsideButton(element)` | Sobe a árvore com `GetParent`; retorna `true` se encontrar `ButtonBase`. |
+| UserInfoPanel | `ShowUser()` → `EnableTextSelectionInPanel()` | Chamado ao exibir dados; percorre `ContentPanel` e `this` e agenda nova passagem em prioridade baixa. |
+| UserInfoPanel | `EnableTextSelectionInSubtree(root)` | Mesma lógica de percurso e exclusão de TextBlocks dentro de `ButtonBase`. |
+| App.xaml / UserInfoPanel.xaml | Estilos `PageDescriptionStyle`, `StatusCaptionStyle`, `FieldLabelStyle`, `FieldValueStyle` | Incluem `IsTextSelectionEnabled="True"` para reforçar a seleção onde esses estilos são usados. |
+
+---
+
+## 8. Fluxo de Dados
 
 ```
 Usuário digita login/nome/grupo
@@ -531,7 +570,7 @@ Usuário digita login/nome/grupo
 
 ---
 
-## 8. Sistema Visual Mica
+## 9. Sistema Visual Mica
 
 O app implementa o sistema de camadas Mica do Fluent Design:
 
@@ -555,7 +594,7 @@ O app implementa o sistema de camadas Mica do Fluent Design:
 
 ---
 
-## 9. Build e Publicação
+## 10. Build e Publicação
 
 ### `build.ps1`
 
@@ -590,7 +629,7 @@ Script PowerShell que publica o app como EXE standalone.
 
 ---
 
-## 10. Segurança e Permissões
+## 11. Segurança e Permissões
 
 **UAC (`requireAdministrator`):** O app solicita elevação ao iniciar. Necessário para:
 - `NetUserGetInfo` (level 3) — requer privilégios de administrador de domínio ou local

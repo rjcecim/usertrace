@@ -1,8 +1,10 @@
 using Microsoft.UI;
 using Microsoft.UI.Composition.SystemBackdrops;
+using Microsoft.UI.Dispatching;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Media;
 using UserTrace.Views;
 using Windows.UI;
@@ -39,6 +41,55 @@ public sealed partial class MainWindow : WindowEx
     {
         if (e.Content is LoginPage && e.Parameter != null)
             NavView.SelectedItem = NavItemLogin;
+
+        var page = e.Content as FrameworkElement;
+        if (page != null)
+        {
+            // Executa assim que a página estiver carregada na árvore visual.
+            void OnPageLoaded(object? s, RoutedEventArgs _)
+            {
+                page.Loaded -= OnPageLoaded;
+                EnableTextSelectionInPage(page);
+                // Segunda passagem para itens de lista virtualizados (ListView, etc.).
+                DispatcherQueue.TryEnqueue(DispatcherQueuePriority.Low, () =>
+                    EnableTextSelectionInPage(page));
+            }
+
+            page.Loaded += OnPageLoaded;
+            // Se já estiver carregada (ex.: primeira página), executa logo.
+            if (page.IsLoaded)
+                OnPageLoaded(null, null!);
+            else
+                EnableTextSelectionInPage(page);
+        }
+
+        // Menu lateral (Busca por Login, Nome, Grupo, Senhas Expiradas, etc.) e ícones Unicode
+        // permanecem sem seleção — só o conteúdo das páginas (detalhes do usuário, listas) pode ser copiado.
+    }
+
+    /// <summary>
+    /// Percorre a árvore visual e ativa IsTextSelectionEnabled em todos os TextBlocks
+    /// (exceto os que estão dentro de botões), permitindo copiar com Ctrl+C ou botão direito.
+    /// </summary>
+    private static void EnableTextSelectionInPage(DependencyObject? root)
+    {
+        if (root == null) return;
+        int count = VisualTreeHelper.GetChildrenCount(root);
+        for (int i = 0; i < count; i++)
+        {
+            var child = VisualTreeHelper.GetChild(root, i);
+            if (child is TextBlock tb && !IsInsideButton(tb))
+                tb.IsTextSelectionEnabled = true;
+            EnableTextSelectionInPage(child);
+        }
+    }
+
+    private static bool IsInsideButton(DependencyObject? element)
+    {
+        for (var parent = VisualTreeHelper.GetParent(element); parent != null; parent = VisualTreeHelper.GetParent(parent))
+            if (parent is ButtonBase)
+                return true;
+        return false;
     }
 
     private void TrySetMicaBackdrop()

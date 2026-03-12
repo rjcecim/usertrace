@@ -51,6 +51,7 @@
             <Setter Property="Foreground"
                     Value="{ThemeResource TextFillColorSecondaryBrush}"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="IsTextSelectionEnabled" Value="True"/>
         </Style>
 
         <!-- Valor de campo -->
@@ -58,6 +59,7 @@
                BasedOn="{StaticResource BodyTextBlockStyle}">
             <Setter Property="VerticalAlignment"  Value="Center"/>
             <Setter Property="TextWrapping"       Value="Wrap"/>
+            <Setter Property="IsTextSelectionEnabled" Value="True"/>
         </Style>
 
     </UserControl.Resources>
