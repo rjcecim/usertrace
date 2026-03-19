@@ -57,6 +57,15 @@
 
             <NavigationView.MenuItems>
                 <NavigationViewItem
+                    x:Name="NavItemDashboard"
+                    Content="Dashboard"
+                    Tag="Dashboard">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE9D2;"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+
+                <NavigationViewItem
                     x:Name="NavItemLogin"
                     Content="Busca por Login"
                     Tag="Login">
