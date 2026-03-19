@@ -63,13 +63,12 @@ public sealed partial class MainWindow : WindowEx
                 EnableTextSelectionInPage(page);
         }
 
-        // Menu lateral (Busca por Login, Nome, Grupo, Senhas Expiradas, etc.) e ícones Unicode
-        // permanecem sem seleção — só o conteúdo das páginas (detalhes do usuário, listas) pode ser copiado.
+        // Menu lateral permanece sem seleção. UserInfoPanel define suas próprias regras (só valores de 4 cards).
     }
 
     /// <summary>
-    /// Percorre a árvore visual e ativa IsTextSelectionEnabled em todos os TextBlocks
-    /// (exceto os que estão dentro de botões), permitindo copiar com Ctrl+C ou botão direito.
+    /// Ativa seleção nos TextBlocks da página para Ctrl+C / botão direito.
+    /// Não entra em <see cref="UserInfoPanel"/> — esse controle aplica regras próprias em <c>ShowUser</c>.
     /// </summary>
     private static void EnableTextSelectionInPage(DependencyObject? root)
     {
@@ -78,6 +77,8 @@ public sealed partial class MainWindow : WindowEx
         for (int i = 0; i < count; i++)
         {
             var child = VisualTreeHelper.GetChild(root, i);
+            if (child is UserInfoPanel)
+                continue;
             if (child is TextBlock tb && !IsInsideButton(tb))
                 tb.IsTextSelectionEnabled = true;
             EnableTextSelectionInPage(child);
