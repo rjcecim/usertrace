@@ -1,6 +1,7 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using UserTrace.Helpers;
 using UserTrace.Models;
 using UserTrace.Services;
 
@@ -57,9 +58,11 @@ public sealed partial class NomePage : Page
             var items = await ActiveDirectorySearchService.SearchByNameAsync(termo, ct);
 
             ResultadoListView.ItemsSource = items;
-            ContadorTextBlock.Text = items.Count == 0
-                ? "Nenhum resultado."
-                : items.Count == 1 ? "1 usuário encontrado." : $"{items.Count} usuários encontrados.";
+            ContadorTextBlock.Text = ContagemPt.Texto(
+                items.Count,
+                "Nenhum resultado.",
+                "1 usuário encontrado.",
+                "{0} usuários encontrados.");
         }
         catch (OperationCanceledException)
         {

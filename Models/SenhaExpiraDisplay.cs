@@ -7,4 +7,19 @@ public sealed class SenhaExpiraDisplay
     public string DisplayName    { get; init; } = string.Empty;
     /// <summary>Data de expiração formatada, ou vazio para "obrigado a trocar no próximo logon".</summary>
     public string DataExpira     { get; init; } = string.Empty;
+
+    public static SenhaExpiraDisplay FromPasswordExpiry(SenhaExpiraItem item) => new()
+    {
+        SamAccountName = item.SamAccountName,
+        DisplayName    = item.DisplayName,
+        DataExpira     = item.Expira.ToString("dd/MM/yyyy")
+    };
+
+    /// <summary>Lista LDAP retorna <see cref="SearchResultItem"/> (sem data de expiração).</summary>
+    public static SenhaExpiraDisplay FromSearchResultNextLogon(SearchResultItem item) => new()
+    {
+        SamAccountName = item.SamAccountName,
+        DisplayName    = item.DisplayName,
+        DataExpira     = string.Empty
+    };
 }

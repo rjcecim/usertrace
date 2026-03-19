@@ -52,7 +52,7 @@ Lista de contas de usuário desativadas no Active Directory (userAccountControl 
 ### 📋 Seleção e cópia de texto
 
 - **Painel de detalhes do usuário:** só os **valores** dos cards **Identidade**, **Status da conta**, **Senha** e **Logon** podem ser selecionados (ex.: data em “Definida pela última vez”, não o rótulo). Chips de grupos e demais rótulos não são selecionáveis.
-- **Demais páginas:** listas, descrições e textos fora desse painel continuam selecionáveis onde a página habilita cópia.
+- **Somente o painel de detalhes do usuário:** em todo o resto do app, a seleção de texto fica desligada.
 - **Onde não pode copiar:** menu lateral, ícones do menu e texto dentro de botões (Buscar, Limpar, Atualizar).
 
 ---

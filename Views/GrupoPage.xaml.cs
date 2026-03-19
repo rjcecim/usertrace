@@ -1,9 +1,10 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using UserTrace.Helpers;
+using UserTrace.Models;
 using UserTrace.Services;
-using GroupItem = UserTrace.Models.GroupItem;
-using SearchResultItem = UserTrace.Models.SearchResultItem;
+using DomainGroupItem = UserTrace.Models.GroupItem;
 
 namespace UserTrace.Views;
 
@@ -55,7 +56,7 @@ public sealed partial class GrupoPage : Page
 
     private async void GruposListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (GruposListView.SelectedItem is not GroupItem grupo) return;
+        if (GruposListView.SelectedItem is not DomainGroupItem grupo) return;
         await CarregarMembrosAsync(grupo);
     }
 
@@ -88,9 +89,11 @@ public sealed partial class GrupoPage : Page
             var grupos = await GroupService.GetAllGroupsAsync(filtro, ct);
 
             GruposListView.ItemsSource = grupos;
-            GruposContadorText.Text = grupos.Count == 0
-                ? "Nenhum grupo encontrado."
-                : grupos.Count == 1 ? "1 grupo encontrado." : $"{grupos.Count} grupos encontrados.";
+            GruposContadorText.Text = ContagemPt.Texto(
+                grupos.Count,
+                "Nenhum grupo encontrado.",
+                "1 grupo encontrado.",
+                "{0} grupos encontrados.");
         }
         catch (OperationCanceledException)
         {
@@ -106,7 +109,7 @@ public sealed partial class GrupoPage : Page
         }
     }
 
-    private async Task CarregarMembrosAsync(GroupItem grupo)
+    private async Task CarregarMembrosAsync(DomainGroupItem grupo)
     {
         _ctsMembros?.Cancel();
         _ctsMembros = new CancellationTokenSource();
@@ -124,9 +127,11 @@ public sealed partial class GrupoPage : Page
             var membros = await GroupService.GetGroupMembersAsync(grupo.Name, ct);
 
             MembrosListView.ItemsSource = membros;
-            MembrosContadorText.Text = membros.Count == 0
-                ? "Nenhum membro encontrado."
-                : membros.Count == 1 ? "1 membro encontrado." : $"{membros.Count} membros encontrados.";
+            MembrosContadorText.Text = ContagemPt.Texto(
+                membros.Count,
+                "Nenhum membro encontrado.",
+                "1 membro encontrado.",
+                "{0} membros encontrados.");
         }
         catch (OperationCanceledException)
         {

@@ -13,6 +13,7 @@
 9. [Sistema Visual Mica](#9-sistema-visual-mica)
 10. [Build e Publicação](#10-build-e-publicação)
 11. [Segurança e Permissões](#11-segurança-e-permissões)
+12. [Convenções de código](#12-convenções-de-código)
 
 ---
 
@@ -44,6 +45,12 @@ usertrace/
     ├── MainWindow.xaml.cs
     ├── Assets/
     │   └── app.ico
+    ├── Converters/
+    │   └── HighlightedGroupToBrushConverter.cs
+    ├── Helpers/
+    │   ├── ContagemPt.cs
+    │   ├── FrameNavigationExtensions.cs
+    │   └── TextSelectionHelper.cs
     ├── Models/
     │   ├── CommandResult.cs
     │   ├── GroupItem.cs
@@ -300,12 +307,12 @@ Janela principal herdando de `WindowEx` (WinUIEx).
 - `MicaBackdrop { Kind = MicaKind.Base }` — efeito Mica ativado
 - Botões da TitleBar com fundo transparente (`ButtonBackgroundColor = Colors.Transparent`)
 - Ícone: `AppWindow.SetIcon(@"Assets\app.ico")`
-- `ContentFrame.Navigated`: quando a página de destino é `LoginPage` com parâmetro (login), `NavView.SelectedItem` é sincronizado para "Busca por Login"; em `NavView_SelectionChanged`, se a página atual já for a do item selecionado, não navega de novo (evita sobrescrever o parâmetro). No mesmo evento, a **seleção de texto** é habilitada apenas no conteúdo da página (método `EnableTextSelectionInPage(page)`); o menu lateral (NavView) **não** recebe ativação de seleção, para que itens do menu e ícones Unicode não sejam copiáveis.
+- `ContentFrame.Navigated` é assinado **antes** do primeiro `Navigate(typeof(LoginPage))` no construtor; caso contrário a carga inicial não dispara o handler e descrições com `PageDescriptionStyle` podem ficar copiáveis até a próxima navegação.
+- `ContentFrame.Navigated`: quando a página de destino é `LoginPage` com parâmetro (login), `NavView.SelectedItem` é sincronizado para "Busca por Login"; em `NavView_SelectionChanged`, se a página atual já for a do item selecionado, não navega de novo (evita sobrescrever o parâmetro). No mesmo evento, a **seleção de texto** fica desligada no conteúdo das páginas (`ApplyCopyPolicyToPage(page)` → `TextSelectionHelper`); o menu lateral (NavView) **não** recebe alteração, para que itens do menu e ícones Unicode não sejam copiáveis.
 
 **Seleção de texto (MainWindow):**
-- `EnableTextSelectionInPage(DependencyObject root)` — percorre a árvore visual e define `IsTextSelectionEnabled = true` em `TextBlock`, **exceto** dentro de `ButtonBase` e **exceto** dentro de `UserInfoPanel` (esse controle aplica `ApplyCopySelectionRules()` em `ShowUser`).
-- `IsInsideButton(DependencyObject element)` — sobe a árvore com `VisualTreeHelper.GetParent` e retorna `true` se algum ancestral for `ButtonBase`.
-- A ativação roda no `Loaded` da página e é reenfileirada com `DispatcherQueuePriority.Low` para pegar itens de lista virtualizados (ListView).
+- `ApplyCopyPolicyToPage(DependencyObject pageRoot)` chama `TextSelectionHelper.DisableTextBlocksOutsideUserInfoPanel`, desligando `IsTextSelectionEnabled` em `TextBlock` fora de `UserInfoPanel` (dentro do painel, `ShowUser` chama `ApplyCopySelectionRules()`).
+- A aplicação roda no `Loaded` da página e é reenfileirada com `DispatcherQueuePriority.Low` para cobrir conteúdo que materializa após o layout.
 
 **Navegação:**
 
@@ -496,7 +503,7 @@ private void SetBadge(Border badge, FontIcon icon, TextBlock label,
 **Seleção de texto (UserInfoPanel):**
 - Ao exibir dados, `ShowUser(UserInfo u)` chama `ApplyCopySelectionRules()`: desliga seleção em todo `ContentPanel` e liga só nos `TextBlock` listados em `CopyableResultTextBlocks()` (valores dos cards Identidade, Status da conta, Senha e Logon). Rótulos, títulos de card e chips de grupos ficam sem seleção. Uma segunda passagem com `DispatcherQueuePriority.Low` cobre conteúdo materializado após o layout.
 - `FieldLabelStyle` e `FieldValueStyle` usam `IsTextSelectionEnabled="False"` no XAML; a lista em código é a fonte da verdade para o que pode copiar.
-- `MainWindow.EnableTextSelectionInPage` **não** percorre filhos de `UserInfoPanel`, para não reativar seleção em rótulos.
+- `TextSelectionHelper.DisableTextBlocksOutsideUserInfoPanel` **não** percorre filhos de `UserInfoPanel`, para não reativar seleção em rótulos.
 
 ---
 
@@ -514,26 +521,26 @@ Página estática com informações do aplicativo, organizada em cards Mica:
 
 ## 7. Seleção de Texto e Cópia
 
-Fora do painel de detalhes, o app habilita seleção no conteúdo das páginas (listas, descrições, etc.) com **Ctrl+C** ou **botão direito → Copiar**. No **UserInfoPanel**, só os **valores** dos quatro cards principais (Identidade, Status da conta, Senha, Logon) são selecionáveis — não os rótulos nem os grupos. Itens do menu lateral e texto dentro de botões não são selecionáveis.
+No app, só o **UserInfoPanel** permite seleção/cópia de texto. Nele, só os **valores** dos quatro cards principais (Identidade, Status da conta, Senha e Logon) são selecionáveis — não os rótulos nem os grupos. Fora desse painel, a seleção de `TextBlock` fica desligada.
 
 ### Onde a seleção é habilitada
 
-- **Conteúdo do Frame:** páginas como Login, Nome, Grupo, listas especiais e Sobre — exceto que o subtree de `UserInfoPanel` é ignorado pelo `MainWindow` e tratado à parte.
 - **UserInfoPanel:** apenas os `TextBlock` de resultado definidos em `CopyableResultTextBlocks()` após `ApplyCopySelectionRules()` em `ShowUser()`.
 
 ### Onde a seleção não é habilitada
 
-- **NavigationView (menu lateral):** `EnableTextSelectionInPage(NavView)` **não** é chamado; itens como "Busca por Login", "Busca por Nome", "Senhas Expiradas", etc., e os ícones Unicode (FontIcon) permanecem sem seleção.
-- **Botões:** qualquer `TextBlock` que tenha um ancestral do tipo `ButtonBase` (Button, HyperlinkButton, RepeatButton, ToggleButton) é ignorado pelo método que ativa seleção — assim, rótulos como "Buscar", "Limpar", "Atualizar" não podem ser selecionados.
+- **NavigationView (menu lateral):** o `ContentFrame` é o alvo da política de cópia; o `NavView` não é percorrido — itens do menu e ícones permanecem sem seleção de `TextBlock` aplicada pelo app.
+- **Botões:** a seleção de `TextBlock` fora do `UserInfoPanel` fica desligada; portanto, rótulos como "Buscar", "Limpar", "Atualizar" não podem ser selecionados.
 - **UserInfoPanel:** rótulos de campo, títulos de card, contadores e chips de grupos locais/globais.
 
 ### Implementação
 
 | Local | Método / momento | Comportamento |
 |-------|------------------|----------------|
-| MainWindow | `ContentFrame_Navigated` → `EnableTextSelectionInPage(page)` | Roda no `Loaded` da página e em passagem com `DispatcherQueuePriority.Low`; não percorre o NavView. |
-| MainWindow | `EnableTextSelectionInPage(root)` | Percorre com `VisualTreeHelper`; ignora nós `UserInfoPanel` (não desce no subtree); em `TextBlock`, `IsTextSelectionEnabled = true` se `!IsInsideButton(tb)`. |
-| MainWindow | `IsInsideButton(element)` | Sobe a árvore com `GetParent`; retorna `true` se encontrar `ButtonBase`. |
+| MainWindow | `ContentFrame_Navigated` → `ApplyCopyPolicyToPage(page)` | Roda no `Loaded` da página e em passagem com `DispatcherQueuePriority.Low`. Delega a `TextSelectionHelper.DisableTextBlocksOutsideUserInfoPanel`. |
+| Helpers | `TextSelectionHelper` | Percorre a árvore com `VisualTreeHelper`; não desce em `UserInfoPanel`. Em `TextBlock`, `IsTextSelectionEnabled = false`. |
+| Helpers | `FrameNavigationExtensions.NavigateToLoginWithSam` | Usado em listas com duplo clique (Senhas Expiradas, Contas Bloqueadas/Desativadas). |
+| Helpers | `ContagemPt.Texto` | Mensagens “0 / 1 / N” em português para contadores de lista. |
 | UserInfoPanel | `ShowUser()` → `ApplyCopySelectionRules()` | `SetTextSelectionInSubtree(ContentPanel, false)` e depois `true` só em `CopyableResultTextBlocks()`; repete em `DispatcherQueuePriority.Low`. |
 | UserInfoPanel | `ShowEmpty()` | `EmptyStateText.IsTextSelectionEnabled = false`. |
 | UserInfoPanel.xaml | `FieldLabelStyle`, `FieldValueStyle` | `IsTextSelectionEnabled="False"`; a lista em código define o que pode copiar. |
@@ -641,3 +648,14 @@ Script PowerShell que publica o app como EXE standalone.
 **Credenciais:** O app usa as credenciais do usuário Windows logado (autenticação integrada Kerberos/NTLM). Nenhuma senha é solicitada ou armazenada.
 
 **Dados em memória:** As informações consultadas existem apenas em memória durante a sessão. Nenhum dado é gravado em disco, log ou rede além das chamadas ao DC.
+
+---
+
+## 12. Convenções de código
+
+- **Namespaces:** `UserTrace` (app shell), `UserTrace.Views`, `UserTrace.Services`, `UserTrace.Models`, `UserTrace.Converters`, `UserTrace.Helpers`.
+- **Helpers (`UserTrace/Helpers/`):** lógica reutilizável sem dependência de XAML de página — seleção de texto (`TextSelectionHelper`), navegação (`FrameNavigationExtensions`), textos de contagem (`ContagemPt`).
+- **Views (code-behind):** `partial class` alinhada ao XAML; operações longas com `async Task` + `CancellationTokenSource` por fluxo; `SetLoading` / análogos mantêm UI desabilitada durante busca.
+- **Models:** DTOs imutáveis (`init`) quando possível; fábricas estáticas em tipos de exibição (ex.: `SenhaExpiraDisplay.FromPasswordExpiry`) para evitar duplicação nas páginas.
+- **Cópia de texto:** política centralizada — `App.xaml` não habilita seleção em estilos globais de descrição; `MainWindow` aplica `TextSelectionHelper` ao conteúdo do `Frame`; `UserInfoPanel` é a única área que reabilita seleção, só nos valores dos quatro cards definidos em `CopyableResultTextBlocks()`.
+- **Conflitos de nome WinUI:** quando um tipo do modelo colide com controles (ex.: `GroupItem`), usar o nome totalmente qualificado `UserTrace.Models.GroupItem` no `is` / parâmetros.
