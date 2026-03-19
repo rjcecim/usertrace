@@ -32,11 +32,11 @@ public sealed partial class MainWindow : WindowEx
         ConfigureTitleBar();
         TrySetMicaBackdrop();
 
-        NavView.SelectedItem = NavItemLogin;
+        NavView.SelectedItem = NavItemDashboard;
         // Precisa vir antes do Navigate inicial: senão a primeira página não dispara o handler
         // e TextBlocks com estilo (ex.: PageDescriptionStyle) ficam copiáveis até a próxima navegação.
         ContentFrame.Navigated += ContentFrame_Navigated;
-        ContentFrame.Navigate(typeof(LoginPage));
+        ContentFrame.Navigate(typeof(DashboardPage));
     }
 
     private void ContentFrame_Navigated(object sender, Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)
@@ -115,6 +115,7 @@ public sealed partial class MainWindow : WindowEx
         var tag = item.Tag?.ToString();
         var pageType = tag switch
             {
+                "Dashboard"         => typeof(DashboardPage),
                 "Login"             => typeof(LoginPage),
                 "Nome"              => typeof(NomePage),
                 "Grupo"             => typeof(GrupoPage),
