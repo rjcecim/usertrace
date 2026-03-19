@@ -1,7 +1,7 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
-using Microsoft.UI.Xaml.Media.Animation;
+using UserTrace.Helpers;
 using UserTrace.Models;
 using UserTrace.Services;
 
@@ -22,10 +22,8 @@ public sealed partial class ContasBloqueadasPage : Page
 
     private void ResultadoListView_DoubleTapped(object sender, DoubleTappedRoutedEventArgs e)
     {
-        if (ResultadoListView.SelectedItem is SearchResultItem item && !string.IsNullOrEmpty(item.SamAccountName))
-        {
-            Frame.Navigate(typeof(LoginPage), item.SamAccountName, new EntranceNavigationTransitionInfo());
-        }
+        if (ResultadoListView.SelectedItem is SearchResultItem item)
+            Frame.NavigateToLoginWithSam(item.SamAccountName);
     }
 
     private async Task ExecutarBuscaAsync()
@@ -41,9 +39,11 @@ public sealed partial class ContasBloqueadasPage : Page
         {
             var list = await ActiveDirectorySearchService.GetLockedOutAccountsAsync(ct);
             ResultadoListView.ItemsSource = list;
-            ContadorTextBlock.Text = list.Count == 0
-                ? "Nenhuma conta bloqueada."
-                : list.Count == 1 ? "1 conta bloqueada." : $"{list.Count} contas bloqueadas.";
+            ContadorTextBlock.Text = ContagemPt.Texto(
+                list.Count,
+                "Nenhuma conta bloqueada.",
+                "1 conta bloqueada.",
+                "{0} contas bloqueadas.");
         }
         catch (OperationCanceledException)
         {

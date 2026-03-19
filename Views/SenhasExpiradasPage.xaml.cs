@@ -1,7 +1,7 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
-using Microsoft.UI.Xaml.Media.Animation;
+using UserTrace.Helpers;
 using UserTrace.Models;
 using UserTrace.Services;
 
@@ -23,10 +23,8 @@ public sealed partial class SenhasExpiradasPage : Page
 
     private void ResultadoListView_DoubleTapped(object sender, DoubleTappedRoutedEventArgs e)
     {
-        if (ResultadoListView.SelectedItem is SenhaExpiraDisplay item && !string.IsNullOrEmpty(item.SamAccountName))
-        {
-            Frame.Navigate(typeof(LoginPage), item.SamAccountName, new EntranceNavigationTransitionInfo());
-        }
+        if (ResultadoListView.SelectedItem is SenhaExpiraDisplay item)
+            Frame.NavigateToLoginWithSam(item.SamAccountName);
     }
 
     private void TipoBuscaCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -61,60 +59,35 @@ public sealed partial class SenhasExpiradasPage : Page
 
         try
         {
-            List<SenhaExpiraDisplay> display;
-            switch (tag)
+            List<SenhaExpiraDisplay> display = tag switch
             {
-                case "Intervalo":
-                    var ini = DataInicioPicker.Date.DateTime;
-                    var fim = DataFimPicker.Date.DateTime;
-                    var listIntervalo = await ActiveDirectorySearchService.GetPasswordExpiringInRangeAsync(ini, fim, ct);
-                    display = listIntervalo.Select(x => new SenhaExpiraDisplay
-                    {
-                        SamAccountName = x.SamAccountName,
-                        DisplayName    = x.DisplayName,
-                        DataExpira     = x.Expira.ToString("dd/MM/yyyy")
-                    }).ToList();
-                    break;
-                case "DataEspecifica":
-                    var data = DataEspecificaPicker.Date.DateTime;
-                    var listData = await ActiveDirectorySearchService.GetPasswordExpiringOnDateAsync(data, ct);
-                    display = listData.Select(x => new SenhaExpiraDisplay
-                    {
-                        SamAccountName = x.SamAccountName,
-                        DisplayName    = x.DisplayName,
-                        DataExpira     = x.Expira.ToString("dd/MM/yyyy")
-                    }).ToList();
-                    break;
-                case "Hoje":
-                    var listHoje = await ActiveDirectorySearchService.GetPasswordExpiringTodayAsync(ct);
-                    display = listHoje.Select(x => new SenhaExpiraDisplay
-                    {
-                        SamAccountName = x.SamAccountName,
-                        DisplayName    = x.DisplayName,
-                        DataExpira     = x.Expira.ToString("dd/MM/yyyy")
-                    }).ToList();
-                    break;
-                case "ProximoLogon":
-                    var listProximo = await ActiveDirectorySearchService.GetMustChangePasswordAtNextLogonAsync(ct);
-                    display = listProximo
-                        .Select(x => new SenhaExpiraDisplay
-                        {
-                            SamAccountName = x.SamAccountName,
-                            DisplayName    = x.DisplayName,
-                            DataExpira     = ""
-                        })
-                        .OrderBy(x => x.DisplayName, StringComparer.OrdinalIgnoreCase)
-                        .ToList();
-                    break;
-                default:
-                    display = new List<SenhaExpiraDisplay>();
-                    break;
-            }
+                "Intervalo" => (await ActiveDirectorySearchService.GetPasswordExpiringInRangeAsync(
+                        DataInicioPicker.Date.DateTime,
+                        DataFimPicker.Date.DateTime,
+                        ct))
+                    .Select(SenhaExpiraDisplay.FromPasswordExpiry)
+                    .ToList(),
+                "DataEspecifica" => (await ActiveDirectorySearchService.GetPasswordExpiringOnDateAsync(
+                        DataEspecificaPicker.Date.DateTime,
+                        ct))
+                    .Select(SenhaExpiraDisplay.FromPasswordExpiry)
+                    .ToList(),
+                "Hoje" => (await ActiveDirectorySearchService.GetPasswordExpiringTodayAsync(ct))
+                    .Select(SenhaExpiraDisplay.FromPasswordExpiry)
+                    .ToList(),
+                "ProximoLogon" => (await ActiveDirectorySearchService.GetMustChangePasswordAtNextLogonAsync(ct))
+                    .Select(SenhaExpiraDisplay.FromSearchResultNextLogon)
+                    .OrderBy(x => x.DisplayName, StringComparer.OrdinalIgnoreCase)
+                    .ToList(),
+                _ => []
+            };
 
             ResultadoListView.ItemsSource = display;
-            ContadorTextBlock.Text = display.Count == 0
-                ? "Nenhum resultado."
-                : display.Count == 1 ? "1 usuário encontrado." : $"{display.Count} usuários encontrados.";
+            ContadorTextBlock.Text = ContagemPt.Texto(
+                display.Count,
+                "Nenhum resultado.",
+                "1 usuário encontrado.",
+                "{0} usuários encontrados.");
         }
         catch (OperationCanceledException)
         {

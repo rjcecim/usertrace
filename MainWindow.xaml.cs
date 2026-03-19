@@ -4,8 +4,9 @@ using Microsoft.UI.Dispatching;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Animation;
+using UserTrace.Helpers;
 using UserTrace.Views;
 using Windows.UI;
 using WinUIEx;
@@ -32,9 +33,10 @@ public sealed partial class MainWindow : WindowEx
         TrySetMicaBackdrop();
 
         NavView.SelectedItem = NavItemLogin;
-        ContentFrame.Navigate(typeof(LoginPage));
-
+        // Precisa vir antes do Navigate inicial: senão a primeira página não dispara o handler
+        // e TextBlocks com estilo (ex.: PageDescriptionStyle) ficam copiáveis até a próxima navegação.
         ContentFrame.Navigated += ContentFrame_Navigated;
+        ContentFrame.Navigate(typeof(LoginPage));
     }
 
     private void ContentFrame_Navigated(object sender, Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)
@@ -49,10 +51,10 @@ public sealed partial class MainWindow : WindowEx
             void OnPageLoaded(object? s, RoutedEventArgs _)
             {
                 page.Loaded -= OnPageLoaded;
-                EnableTextSelectionInPage(page);
-                // Segunda passagem para itens de lista virtualizados (ListView, etc.).
+                ApplyCopyPolicyToPage(page);
+                // Segunda passagem: conteúdo materializado após layout (ListView virtualizado, etc.).
                 DispatcherQueue.TryEnqueue(DispatcherQueuePriority.Low, () =>
-                    EnableTextSelectionInPage(page));
+                    ApplyCopyPolicyToPage(page));
             }
 
             page.Loaded += OnPageLoaded;
@@ -60,38 +62,15 @@ public sealed partial class MainWindow : WindowEx
             if (page.IsLoaded)
                 OnPageLoaded(null, null!);
             else
-                EnableTextSelectionInPage(page);
+                ApplyCopyPolicyToPage(page);
         }
-
-        // Menu lateral permanece sem seleção. UserInfoPanel define suas próprias regras (só valores de 4 cards).
     }
 
     /// <summary>
-    /// Ativa seleção nos TextBlocks da página para Ctrl+C / botão direito.
-    /// Não entra em <see cref="UserInfoPanel"/> — esse controle aplica regras próprias em <c>ShowUser</c>.
+    /// Desativa seleção em <see cref="TextBlock"/> fora do <see cref="UserInfoPanel"/>.
     /// </summary>
-    private static void EnableTextSelectionInPage(DependencyObject? root)
-    {
-        if (root == null) return;
-        int count = VisualTreeHelper.GetChildrenCount(root);
-        for (int i = 0; i < count; i++)
-        {
-            var child = VisualTreeHelper.GetChild(root, i);
-            if (child is UserInfoPanel)
-                continue;
-            if (child is TextBlock tb && !IsInsideButton(tb))
-                tb.IsTextSelectionEnabled = true;
-            EnableTextSelectionInPage(child);
-        }
-    }
-
-    private static bool IsInsideButton(DependencyObject? element)
-    {
-        for (var parent = VisualTreeHelper.GetParent(element); parent != null; parent = VisualTreeHelper.GetParent(parent))
-            if (parent is ButtonBase)
-                return true;
-        return false;
-    }
+    private static void ApplyCopyPolicyToPage(DependencyObject? pageRoot) =>
+        TextSelectionHelper.DisableTextBlocksOutsideUserInfoPanel(pageRoot);
 
     private void TrySetMicaBackdrop()
     {
@@ -152,7 +131,6 @@ public sealed partial class MainWindow : WindowEx
         // MICA BEST PRACTICE #7 — Transição de navegação suave.
         // EntranceNavigationTransitionInfo desliza o conteúdo de baixo para cima,
         // revelando o Mica progressivamente — sensação de profundidade real.
-        ContentFrame.Navigate(pageType, null,
-            new Microsoft.UI.Xaml.Media.Animation.EntranceNavigationTransitionInfo());
+        ContentFrame.Navigate(pageType, null, new EntranceNavigationTransitionInfo());
     }
 }

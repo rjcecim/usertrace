@@ -2,6 +2,7 @@ using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+using UserTrace.Helpers;
 using UserTrace.Models;
 
 namespace UserTrace.Views;
@@ -19,30 +20,17 @@ public sealed partial class UserInfoPanel : UserControl
     /// </summary>
     private void ApplyCopySelectionRules()
     {
-        SetTextSelectionInSubtree(ContentPanel, enabled: false);
+        TextSelectionHelper.SetTextBlockSelectionRecursive(ContentPanel, enabled: false);
         foreach (var tb in CopyableResultTextBlocks())
             tb.IsTextSelectionEnabled = true;
 
         // Itens de lista (grupos) podem ser materializados após o layout; segunda passagem mantém rótulos desligados.
         DispatcherQueue.TryEnqueue(DispatcherQueuePriority.Low, () =>
         {
-            SetTextSelectionInSubtree(ContentPanel, enabled: false);
+            TextSelectionHelper.SetTextBlockSelectionRecursive(ContentPanel, enabled: false);
             foreach (var tb in CopyableResultTextBlocks())
                 tb.IsTextSelectionEnabled = true;
         });
-    }
-
-    private static void SetTextSelectionInSubtree(DependencyObject? root, bool enabled)
-    {
-        if (root == null) return;
-        int count = VisualTreeHelper.GetChildrenCount(root);
-        for (int i = 0; i < count; i++)
-        {
-            var child = VisualTreeHelper.GetChild(root, i);
-            if (child is TextBlock tb)
-                tb.IsTextSelectionEnabled = enabled;
-            SetTextSelectionInSubtree(child, enabled);
-        }
     }
 
     /// <summary>TextBlocks que exibem apenas o resultado (valor), não o rótulo do campo.</summary>
@@ -84,6 +72,9 @@ public sealed partial class UserInfoPanel : UserControl
 
     public void ShowUser(UserInfo u)
     {
+        // Garante que o estado vazio não fique copiável (mesmo escondido).
+        EmptyStateText.IsTextSelectionEnabled = false;
+
         // Identidade
         FullNameText.Text = string.IsNullOrWhiteSpace(u.FullName) ? u.SamAccountName : u.FullName;
         SamText.Text      = u.SamAccountName;

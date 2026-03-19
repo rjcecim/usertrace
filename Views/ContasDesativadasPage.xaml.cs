@@ -1,7 +1,7 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
-using Microsoft.UI.Xaml.Media.Animation;
+using UserTrace.Helpers;
 using UserTrace.Models;
 using UserTrace.Services;
 
@@ -22,10 +22,8 @@ public sealed partial class ContasDesativadasPage : Page
 
     private void ResultadoListView_DoubleTapped(object sender, DoubleTappedRoutedEventArgs e)
     {
-        if (ResultadoListView.SelectedItem is SearchResultItem item && !string.IsNullOrEmpty(item.SamAccountName))
-        {
-            Frame.Navigate(typeof(LoginPage), item.SamAccountName, new EntranceNavigationTransitionInfo());
-        }
+        if (ResultadoListView.SelectedItem is SearchResultItem item)
+            Frame.NavigateToLoginWithSam(item.SamAccountName);
     }
 
     private async Task ExecutarBuscaAsync()
@@ -41,9 +39,11 @@ public sealed partial class ContasDesativadasPage : Page
         {
             var list = await ActiveDirectorySearchService.GetDisabledAccountsAsync(ct);
             ResultadoListView.ItemsSource = list;
-            ContadorTextBlock.Text = list.Count == 0
-                ? "Nenhuma conta desativada."
-                : list.Count == 1 ? "1 conta desativada." : $"{list.Count} contas desativadas.";
+            ContadorTextBlock.Text = ContagemPt.Texto(
+                list.Count,
+                "Nenhuma conta desativada.",
+                "1 conta desativada.",
+                "{0} contas desativadas.");
         }
         catch (OperationCanceledException)
         {
