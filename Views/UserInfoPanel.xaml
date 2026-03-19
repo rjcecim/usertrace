@@ -45,21 +45,21 @@
             <Setter Property="Margin"         Value="0,0,6,6"/>
         </Style>
 
-        <!-- Label de campo -->
+        <!-- Label de campo (não copiável; só valores são selecionáveis — ver UserInfoPanel.xaml.cs) -->
         <Style x:Key="FieldLabelStyle" TargetType="TextBlock"
                BasedOn="{StaticResource CaptionTextBlockStyle}">
             <Setter Property="Foreground"
                     Value="{ThemeResource TextFillColorSecondaryBrush}"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
-            <Setter Property="IsTextSelectionEnabled" Value="True"/>
+            <Setter Property="IsTextSelectionEnabled" Value="False"/>
         </Style>
 
-        <!-- Valor de campo -->
+        <!-- Valor de campo: seleção é aplicada só nos TextBlocks permitidos em código -->
         <Style x:Key="FieldValueStyle" TargetType="TextBlock"
                BasedOn="{StaticResource BodyTextBlockStyle}">
             <Setter Property="VerticalAlignment"  Value="Center"/>
             <Setter Property="TextWrapping"       Value="Wrap"/>
-            <Setter Property="IsTextSelectionEnabled" Value="True"/>
+            <Setter Property="IsTextSelectionEnabled" Value="False"/>
         </Style>
 
     </UserControl.Resources>

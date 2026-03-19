@@ -51,8 +51,9 @@ Lista de contas de usuário desativadas no Active Directory (userAccountControl 
 
 ### 📋 Seleção e cópia de texto
 
-- **Onde pode copiar:** no conteúdo das páginas — detalhes do usuário (nome, login, grupos, datas, etc.), listas de resultados, descrições e textos dos cards. Selecione com o mouse e use **Ctrl+C** ou **botão direito → Copiar**.
-- **Onde não pode copiar:** itens do menu lateral (Busca por Login, Busca por Nome, etc.), ícones do menu e texto dentro de botões (Buscar, Limpar, Atualizar). Esses elementos não permitem seleção para manter a interface limpa e evitar cópia acidental de rótulos.
+- **Painel de detalhes do usuário:** só os **valores** dos cards **Identidade**, **Status da conta**, **Senha** e **Logon** podem ser selecionados (ex.: data em “Definida pela última vez”, não o rótulo). Chips de grupos e demais rótulos não são selecionáveis.
+- **Demais páginas:** listas, descrições e textos fora desse painel continuam selecionáveis onde a página habilita cópia.
+- **Onde não pode copiar:** menu lateral, ícones do menu e texto dentro de botões (Buscar, Limpar, Atualizar).
 
 ---
 

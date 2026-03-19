@@ -1,7 +1,6 @@
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Media;
 using UserTrace.Models;
 
@@ -15,49 +14,71 @@ public sealed partial class UserInfoPanel : UserControl
     }
 
     /// <summary>
-    /// Habilita seleção de texto em todos os TextBlocks do painel (para Ctrl+C e botão direito → Copiar).
-    /// Chamado quando os dados do usuário são exibidos, garantindo que funcione também ao navegar
-    /// por Senhas Expiradas / Contas Bloqueadas / Contas Desativadas (dados carregados depois).
+    /// Só os valores dos cards Identidade, Status da conta, Senha e Logon podem ser selecionados para copiar.
+    /// Rótulos (ex.: "Definida pela última vez"), títulos dos cards e listas de grupos não são selecionáveis.
     /// </summary>
-    private void EnableTextSelectionInPanel()
+    private void ApplyCopySelectionRules()
     {
-        // Passa 1: a partir do ContentPanel (onde estão os dados do usuário), garantindo os TextBlocks dos cards.
-        EnableTextSelectionInSubtree(ContentPanel);
-        // Passa 2: a partir da raiz do controle, para pegar qualquer texto (ex.: se a árvore do UserControl for diferente).
-        EnableTextSelectionInSubtree(this);
-        // Passa 3: após o layout, para quando a navegação vem de Senhas Expiradas / Contas Bloqueadas / Contas Desativadas.
+        SetTextSelectionInSubtree(ContentPanel, enabled: false);
+        foreach (var tb in CopyableResultTextBlocks())
+            tb.IsTextSelectionEnabled = true;
+
+        // Itens de lista (grupos) podem ser materializados após o layout; segunda passagem mantém rótulos desligados.
         DispatcherQueue.TryEnqueue(DispatcherQueuePriority.Low, () =>
         {
-            EnableTextSelectionInSubtree(ContentPanel);
-            EnableTextSelectionInSubtree(this);
+            SetTextSelectionInSubtree(ContentPanel, enabled: false);
+            foreach (var tb in CopyableResultTextBlocks())
+                tb.IsTextSelectionEnabled = true;
         });
     }
 
-    private static void EnableTextSelectionInSubtree(DependencyObject? root)
+    private static void SetTextSelectionInSubtree(DependencyObject? root, bool enabled)
     {
         if (root == null) return;
         int count = VisualTreeHelper.GetChildrenCount(root);
         for (int i = 0; i < count; i++)
         {
             var child = VisualTreeHelper.GetChild(root, i);
-            if (child is TextBlock tb && !IsInsideButton(tb))
-                tb.IsTextSelectionEnabled = true;
-            EnableTextSelectionInSubtree(child);
+            if (child is TextBlock tb)
+                tb.IsTextSelectionEnabled = enabled;
+            SetTextSelectionInSubtree(child, enabled);
         }
     }
 
-    private static bool IsInsideButton(DependencyObject? element)
+    /// <summary>TextBlocks que exibem apenas o resultado (valor), não o rótulo do campo.</summary>
+    private IEnumerable<TextBlock> CopyableResultTextBlocks()
     {
-        for (var parent = VisualTreeHelper.GetParent(element); parent != null; parent = VisualTreeHelper.GetParent(parent))
-            if (parent is ButtonBase)
-                return true;
-        return false;
+        // Identidade
+        yield return FullNameText;
+        yield return SamText;
+        yield return DomainText;
+
+        // Status da conta
+        yield return ContaAtivaText;
+        yield return ContaExpiraText;
+        yield return SenhaExpiradaText;
+        yield return SmartcardText;
+
+        // Senha
+        yield return SenhaDefinidaText;
+        yield return SenhaExpiraText;
+        yield return SenhaAlteravelText;
+        yield return SenhaObrigText;
+
+        // Logon
+        yield return UltimoLogonText;
+        yield return UltimoLogoffText;
+        yield return EstacoesText;
+        yield return ScriptText;
+        yield return PerfilText;
+        yield return HomeDirText;
     }
 
     public void ShowEmpty(string message = "Informe um login e clique em Buscar.")
     {
-        EmptyStateText.Text    = message;
-        EmptyState.Visibility  = Visibility.Visible;
+        EmptyStateText.Text     = message;
+        EmptyStateText.IsTextSelectionEnabled = false;
+        EmptyState.Visibility   = Visibility.Visible;
         ContentPanel.Visibility = Visibility.Collapsed;
     }
 
@@ -118,8 +139,7 @@ public sealed partial class UserInfoPanel : UserControl
         EmptyState.Visibility   = Visibility.Collapsed;
         ContentPanel.Visibility = Visibility.Visible;
 
-        // Garante seleção de texto no painel (principalmente quando viemos de Senhas Expiradas / Contas Bloqueadas / Contas Desativadas).
-        EnableTextSelectionInPanel();
+        ApplyCopySelectionRules();
     }
 
     /// <summary>
