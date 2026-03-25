@@ -140,10 +140,14 @@ public static class NetUserService
         List<string> localGroups, List<string> globalGroups,
         string? dc)
     {
+        var ad = GetAdIdentityProps(sam, dc);
         return new UserInfo
         {
             SamAccountName    = u.usri3_name    ?? sam,
             FullName          = u.usri3_full_name ?? string.Empty,
+            Email             = ad.Email,
+            PhoneNumber       = ad.PhoneNumber,
+            Office            = ad.Office,
             Comment           = u.usri3_comment  ?? string.Empty,
             UserComment       = u.usri3_usr_comment ?? string.Empty,
 
@@ -169,6 +173,46 @@ public static class NetUserService
 
             Domain = dc ?? Environment.UserDomainName
         };
+    }
+
+    private readonly record struct AdIdentityProps(string Email, string PhoneNumber, string Office);
+
+    private static AdIdentityProps GetAdIdentityProps(string sam, string? dc)
+    {
+        try
+        {
+            string ldapPath = string.IsNullOrEmpty(dc) ? "LDAP://" : $"LDAP://{dc}";
+            using var root = new DirectoryEntry(ldapPath);
+            using var searcher = new DirectorySearcher(root)
+            {
+                Filter      = $"(&(objectCategory=person)(objectClass=user)(sAMAccountName={EscapeLdap(sam)}))",
+                SearchScope = SearchScope.Subtree,
+                SizeLimit   = 1
+            };
+
+            searcher.PropertiesToLoad.Add("mail");
+            searcher.PropertiesToLoad.Add("telephoneNumber");
+            searcher.PropertiesToLoad.Add("physicalDeliveryOfficeName");
+
+            var result = searcher.FindOne();
+            if (result == null) return default;
+
+            string GetProp(string name)
+            {
+                var props = result.Properties[name];
+                if (props == null || props.Count == 0) return string.Empty;
+                return props[0]?.ToString() ?? string.Empty;
+            }
+
+            return new AdIdentityProps(
+                Email:       GetProp("mail"),
+                PhoneNumber: GetProp("telephoneNumber"),
+                Office:      GetProp("physicalDeliveryOfficeName"));
+        }
+        catch
+        {
+            return default;
+        }
     }
 
     private static string? GetDomainController()
