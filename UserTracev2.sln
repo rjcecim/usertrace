@@ -2,7 +2,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.5.2.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UserTrace", "UserTrace.csproj", "{65EB4F75-3DC2-2262-7550-71D4DD232A42}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UserTracev2", "UserTracev2.csproj", "{65EB4F75-3DC2-2262-7550-71D4DD232A42}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
