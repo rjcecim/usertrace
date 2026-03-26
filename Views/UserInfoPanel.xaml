@@ -301,6 +301,7 @@
                                 <RowDefinition/>
                                 <RowDefinition/>
                                 <RowDefinition/>
+                                <RowDefinition/>
                             </Grid.RowDefinitions>
 
                             <StackPanel Grid.Row="0" Grid.Column="0" Spacing="4">
@@ -317,6 +318,16 @@
                             </StackPanel>
 
                             <StackPanel Grid.Row="1" Grid.Column="0" Spacing="4">
+                                <TextBlock Text="Faltam (dias) para expirar" Style="{StaticResource FieldLabelStyle}"/>
+                                <TextBlock x:Name="DiasParaExpirarText" Style="{StaticResource FieldValueStyle}"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="1" Grid.Column="1" Spacing="4">
+                                <TextBlock Text="Bloqueio em (lockout)" Style="{StaticResource FieldLabelStyle}"/>
+                                <TextBlock x:Name="LockoutTimeText" Style="{StaticResource FieldValueStyle}"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="2" Grid.Column="0" Spacing="4">
                                 <TextBlock Text="Pode ser alterada" Style="{StaticResource FieldLabelStyle}"/>
                                 <Border x:Name="SenhaAlteravelBadge">
                                     <StackPanel Orientation="Horizontal" Spacing="4">
@@ -326,7 +337,7 @@
                                 </Border>
                             </StackPanel>
 
-                            <StackPanel Grid.Row="1" Grid.Column="1" Spacing="4">
+                            <StackPanel Grid.Row="2" Grid.Column="1" Spacing="4">
                                 <TextBlock Text="Obrigatória" Style="{StaticResource FieldLabelStyle}"/>
                                 <Border x:Name="SenhaObrigBadge">
                                     <StackPanel Orientation="Horizontal" Spacing="4">
@@ -336,12 +347,12 @@
                                 </Border>
                             </StackPanel>
 
-                            <StackPanel Grid.Row="2" Grid.Column="0" Spacing="4">
+                            <StackPanel Grid.Row="3" Grid.Column="0" Spacing="4">
                                 <TextBlock Text="Tentativas de senha inválida" Style="{StaticResource FieldLabelStyle}"/>
                                 <TextBlock x:Name="BadPasswordCountText" Style="{StaticResource FieldValueStyle}"/>
                             </StackPanel>
 
-                            <StackPanel Grid.Row="2" Grid.Column="1" Spacing="4">
+                            <StackPanel Grid.Row="3" Grid.Column="1" Spacing="4">
                                 <TextBlock Text="Última tentativa de senha inválida" Style="{StaticResource FieldLabelStyle}"/>
                                 <TextBlock x:Name="BadPasswordTimeText" Style="{StaticResource FieldValueStyle}"/>
                             </StackPanel>

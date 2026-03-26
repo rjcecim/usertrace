@@ -18,7 +18,7 @@
 ## ✨ Funcionalidades
 
 ### 👤 Busca por Login
-Informe o `sAMAccountName` de um usuário e visualize instantaneamente todas as informações da conta: nome completo, status, configurações de senha, último logon, grupos locais e grupos globais.
+Informe o `sAMAccountName` de um usuário e visualize instantaneamente todas as informações da conta: nome completo, status, configurações de senha (incluindo **bloqueio/lockout**, última definição e **dias para expirar**), último logon, grupos locais e grupos globais.
 
 ### 🔎 Busca por Nome
 Pesquise usuários pelo nome parcial. O app lista os resultados encontrados no AD e, ao selecionar um, exibe o painel completo de detalhes.

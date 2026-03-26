@@ -84,6 +84,9 @@ public static class NetUserService
     private const uint UF_SMARTCARD_REQUIRED = 0x40000;
     private const uint UF_PASSWORD_EXPIRED   = 0x800000;
 
+    // Mantém a mesma política usada em ActiveDirectorySearchService (Senhas expiradas).
+    private const int PasswordMaxAgeDays = 180;
+
     #endregion
 
     public static Task<CommandResult> GetUserDetailsAsync(
@@ -141,6 +144,23 @@ public static class NetUserService
         string? dc)
     {
         var ad = GetAdIdentityProps(sam, dc);
+
+        var passwordNeverExpires = HasFlag(u.usri3_flags, UF_DONT_EXPIRE_PASSWD);
+        var passwordExpiredFlag  = HasFlag(u.usri3_flags, UF_PASSWORD_EXPIRED);
+
+        var passwordLastSetText =
+            !string.IsNullOrWhiteSpace(ad.PasswordLastSet)
+                ? ad.PasswordLastSet
+                : FormatPasswordAge(u.usri3_password_age);
+
+        string passwordExpiresOnText;
+        string passwordDaysToExpireText;
+        CalculatePasswordExpiry(
+            passwordNeverExpires,
+            ad.PwdLastSetFileTime,
+            out passwordExpiresOnText,
+            out passwordDaysToExpireText);
+
         return new UserInfo
         {
             SamAccountName    = u.usri3_name    ?? sam,
@@ -154,11 +174,14 @@ public static class NetUserService
             AccountActive     = !HasFlag(u.usri3_flags, UF_ACCOUNTDISABLE),
             AccountExpires    = FormatTimestamp(u.usri3_acct_expires),
 
-            PasswordLastSet      = FormatPasswordAge(u.usri3_password_age),
+            PasswordLastSet      = passwordLastSetText,
+            PasswordExpiresOn    = passwordExpiresOnText,
+            PasswordDaysToExpire = passwordDaysToExpireText,
             BadPasswordCount     = ad.BadPasswordCount,
             BadPasswordTime      = ad.BadPasswordTime,
-            PasswordNeverExpires = HasFlag(u.usri3_flags, UF_DONT_EXPIRE_PASSWD),
-            PasswordExpired      = HasFlag(u.usri3_flags, UF_PASSWORD_EXPIRED),
+            LockoutTime          = ad.LockoutTime,
+            PasswordNeverExpires = passwordNeverExpires,
+            PasswordExpired      = passwordExpiredFlag,
             PasswordRequired     = !HasFlag(u.usri3_flags, UF_PASSWD_NOTREQD),
             PasswordChangeable   = !HasFlag(u.usri3_flags, UF_PASSWD_CANT_CHANGE),
             SmartcardRequired    = HasFlag(u.usri3_flags, UF_SMARTCARD_REQUIRED),
@@ -182,7 +205,10 @@ public static class NetUserService
         string PhoneNumber,
         string Office,
         string BadPasswordCount,
-        string BadPasswordTime);
+        string BadPasswordTime,
+        string LockoutTime,
+        string PasswordLastSet,
+        long   PwdLastSetFileTime);
 
     private static AdIdentityProps GetAdIdentityProps(string sam, string? dc)
     {
@@ -202,6 +228,8 @@ public static class NetUserService
             searcher.PropertiesToLoad.Add("physicalDeliveryOfficeName");
             searcher.PropertiesToLoad.Add("badPwdCount");
             searcher.PropertiesToLoad.Add("badPasswordTime");
+            searcher.PropertiesToLoad.Add("lockoutTime");
+            searcher.PropertiesToLoad.Add("pwdLastSet");
 
             var result = searcher.FindOne();
             if (result == null) return default;
@@ -218,7 +246,10 @@ public static class NetUserService
                 PhoneNumber: GetProp("telephoneNumber"),
                 Office:      GetProp("physicalDeliveryOfficeName"),
                 BadPasswordCount: GetProp("badPwdCount"),
-                BadPasswordTime: FormatAdFileTime(GetAdProp(result, "badPasswordTime")));
+                BadPasswordTime: FormatAdFileTime(GetAdProp(result, "badPasswordTime"), zeroText: "Nunca"),
+                LockoutTime:     FormatAdFileTime(GetAdProp(result, "lockoutTime"),    zeroText: "Não bloqueada"),
+                PasswordLastSet: FormatAdFileTime(GetAdProp(result, "pwdLastSet"),      zeroText: "No próximo logon"),
+                PwdLastSetFileTime: TryReadAdFileTime(GetAdProp(result, "pwdLastSet")));
         }
         catch
         {
@@ -233,10 +264,10 @@ public static class NetUserService
         return props[0];
     }
 
-    private static string FormatAdFileTime(object? value)
+    private static string FormatAdFileTime(object? value, string zeroText)
     {
         long fileTime = TryReadAdFileTime(value);
-        if (fileTime <= 0) return "Nunca";
+        if (fileTime <= 0) return zeroText;
 
         try
         {
@@ -245,7 +276,7 @@ public static class NetUserService
         }
         catch
         {
-            return "Nunca";
+            return zeroText;
         }
     }
 
@@ -277,6 +308,45 @@ public static class NetUserService
         catch { }
 
         return 0;
+    }
+
+    private static void CalculatePasswordExpiry(
+        bool passwordNeverExpires,
+        long pwdLastSetFileTime,
+        out string passwordExpiresOn,
+        out string passwordDaysToExpire)
+    {
+        if (passwordNeverExpires)
+        {
+            passwordExpiresOn  = "Nunca";
+            passwordDaysToExpire = "—";
+            return;
+        }
+
+        // pwdLastSet = 0 → deve trocar no próximo logon.
+        if (pwdLastSetFileTime <= 0)
+        {
+            passwordExpiresOn  = "No próximo logon";
+            passwordDaysToExpire = "—";
+            return;
+        }
+
+        try
+        {
+            var lastSet = DateTime.FromFileTimeUtc(pwdLastSetFileTime).ToLocalTime();
+            var expires = lastSet.AddDays(PasswordMaxAgeDays);
+
+            passwordExpiresOn = expires.ToString("dd/MM/yyyy HH:mm");
+
+            var days = (expires.Date - DateTime.Today).Days;
+            if (days < 0) days = 0;
+            passwordDaysToExpire = days.ToString();
+        }
+        catch
+        {
+            passwordExpiresOn  = "Conforme política";
+            passwordDaysToExpire = "—";
+        }
     }
 
     private static string? GetDomainController()

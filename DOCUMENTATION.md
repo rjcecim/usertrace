@@ -136,7 +136,10 @@ Modelo estruturado com todos os atributos de um usuário do AD.
 | `UserComment` | `string` | `USER_INFO_3.usri3_usr_comment` |
 | `AccountActive` | `bool` | flag `UF_ACCOUNTDISABLE` invertida |
 | `AccountExpires` | `string` | `usri3_acct_expires` formatado |
-| `PasswordLastSet` | `string` | `usri3_password_age` calculado |
+| `PasswordLastSet` | `string` | LDAP `pwdLastSet` (fallback: `usri3_password_age` calculado) |
+| `PasswordExpiresOn` | `string` | calculado a partir de `pwdLastSet` + política (180 dias) |
+| `PasswordDaysToExpire` | `string` | calculado a partir de `PasswordExpiresOn` (dias restantes; mínimo 0) |
+| `LockoutTime` | `string` | LDAP `lockoutTime` formatado (FILETIME) |
 | `PasswordNeverExpires` | `bool` | flag `UF_DONT_EXPIRE_PASSWD` |
 | `PasswordExpired` | `bool` | flag `UF_PASSWORD_EXPIRED` |
 | `PasswordRequired` | `bool` | flag `UF_PASSWD_NOTREQD` invertida |
@@ -483,7 +486,7 @@ UserControl reutilizável que exibe os dados de um `UserInfo` em cards visuais.
 |---|---|
 | Identidade | Avatar com inicial, `FullName`, `SamAccountName`, `Domain`, `Comment`, `UserComment` |
 | Status da Conta | Badges coloridos: Conta Ativa/Inativa, Conta Expirada, Senha Expirada, Smartcard |
-| Senha | `PasswordLastSet`, badges: Nunca Expira, Expirada, Alterável, Obrigatória |
+| Senha | `PasswordLastSet`, `PasswordExpiresOn`, `PasswordDaysToExpire`, `BadPasswordCount`, `BadPasswordTime`, `LockoutTime`, badges: Alterável, Obrigatória |
 | Logon | `LastLogon`, `LastLogoff`, Estações de Trabalho, Script de Logon, Perfil, Diretório Home |
 | Grupos Locais | Chips com nome de cada grupo local |
 | Grupos Globais | Chips com nome de cada grupo global (via LDAP `memberOf`) |

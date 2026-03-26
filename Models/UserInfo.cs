@@ -21,8 +21,11 @@ public sealed class UserInfo
 
     // Senha
     public string PasswordLastSet    { get; init; } = string.Empty;
+    public string PasswordExpiresOn  { get; init; } = string.Empty;
+    public string PasswordDaysToExpire { get; init; } = string.Empty;
     public string BadPasswordCount   { get; init; } = string.Empty;
     public string BadPasswordTime    { get; init; } = string.Empty;
+    public string LockoutTime        { get; init; } = string.Empty;
     public bool   PasswordNeverExpires { get; init; }
     public bool   PasswordExpired    { get; init; }
     public bool   PasswordRequired   { get; init; }
