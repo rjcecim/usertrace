@@ -100,11 +100,18 @@ dotnet build --configuration Release
 ### Publicar EXE standalone
 
 ```powershell
-# Gera win-x64, win-x86 e win-arm64 em publish\<rid>\
-.\build.ps1
+# Uma arquitetura (ex.: win-x64)
+dotnet publish --configuration Release -r win-x64 --self-contained true `
+  -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true `
+  -o publish\win-x64
 
-# Apenas uma arquitetura
-.\build.ps1 -Rid win-x64
+# Todas as arquiteturas (win-x64, win-x86, win-arm64)
+$rids = @("win-x64","win-x86","win-arm64")
+foreach ($rid in $rids) {
+  dotnet publish --configuration Release -r $rid --self-contained true `
+    -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true `
+    -o ("publish\" + $rid)
+}
 ```
 
 O EXE gerado em `publish\win-x64\UserTrace.exe` é **self-contained**, **comprimido** (~85 MB) e não requer nenhuma dependência instalada na máquina de destino.

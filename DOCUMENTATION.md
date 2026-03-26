@@ -35,42 +35,41 @@ usertrace/
 ├── .gitignore
 ├── README.md
 ├── DOCUMENTATION.md
-└── UserTrace/                          ← pasta do projeto
-    ├── UserTrace.csproj
-    ├── app.manifest
-    ├── build.ps1
-    ├── App.xaml
-    ├── App.xaml.cs
-    ├── MainWindow.xaml
-    ├── MainWindow.xaml.cs
-    ├── Assets/
-    │   └── app.ico
-    ├── Converters/
-    │   └── HighlightedGroupToBrushConverter.cs
-    ├── Helpers/
-    │   ├── ContagemPt.cs
-    │   ├── FrameNavigationExtensions.cs
-    │   └── TextSelectionHelper.cs
-    ├── Models/
-    │   ├── CommandResult.cs
-    │   ├── GroupItem.cs
-    │   ├── SearchResultItem.cs
-    │   ├── SenhaExpiraDisplay.cs
-    │   ├── SenhaExpiraItem.cs
-    │   └── UserInfo.cs
-    ├── Services/
-    │   ├── ActiveDirectorySearchService.cs
-    │   ├── GroupService.cs
-    │   └── NetUserService.cs
-    └── Views/
-        ├── ContasBloqueadasPage.xaml / .cs
-        ├── ContasDesativadasPage.xaml / .cs
-        ├── GrupoPage.xaml / .cs
-        ├── LoginPage.xaml / .cs
-        ├── NomePage.xaml / .cs
-        ├── SenhasExpiradasPage.xaml / .cs
-        ├── SobrePage.xaml / .cs
-        └── UserInfoPanel.xaml / .cs
+├── UserTrace.sln
+├── UserTrace.csproj
+├── app.manifest
+├── App.xaml
+├── App.xaml.cs
+├── MainWindow.xaml
+├── MainWindow.xaml.cs
+├── Assets/
+│   └── app.ico
+├── Converters/
+│   └── HighlightedGroupToBrushConverter.cs
+├── Helpers/
+│   ├── ContagemPt.cs
+│   ├── FrameNavigationExtensions.cs
+│   └── TextSelectionHelper.cs
+├── Models/
+│   ├── CommandResult.cs
+│   ├── GroupItem.cs
+│   ├── SearchResultItem.cs
+│   ├── SenhaExpiraDisplay.cs
+│   ├── SenhaExpiraItem.cs
+│   └── UserInfo.cs
+├── Services/
+│   ├── ActiveDirectorySearchService.cs
+│   ├── GroupService.cs
+│   └── NetUserService.cs
+└── Views/
+    ├── ContasBloqueadasPage.xaml / .cs
+    ├── ContasDesativadasPage.xaml / .cs
+    ├── GrupoPage.xaml / .cs
+    ├── LoginPage.xaml / .cs
+    ├── NomePage.xaml / .cs
+    ├── SenhasExpiradasPage.xaml / .cs
+    ├── SobrePage.xaml / .cs
+    └── UserInfoPanel.xaml / .cs
 ```
 
 ---
@@ -603,28 +602,34 @@ O app implementa o sistema de camadas Mica do Fluent Design:
 
 ## 10. Build e Publicação
 
-### `build.ps1`
+### Compilar (Release)
 
-Script PowerShell que publica o app como EXE standalone.
-
-**Parâmetros:**
-- `-Rid` (opcional): runtime identifier alvo. Padrão: todos (`win-x64`, `win-x86`, `win-arm64`)
-
-**Para cada RID:**
-1. Remove a pasta de saída anterior (`publish\<rid>\`)
-2. Executa `dotnet publish` com os parâmetros:
-   - `--self-contained true`
-   - `-p:PublishSingleFile=true`
-   - `-p:EnableCompressionInSingleFile=true`
-3. Exibe o tamanho do EXE gerado
-
-**Uso:**
 ```powershell
-.\build.ps1              # gera win-x64 + win-x86 + win-arm64
-.\build.ps1 -Rid win-x64 # apenas x64
+dotnet build --configuration Release
 ```
 
-**Saída:** `publish\win-x64\UserTrace.exe` (~85 MB)
+### Publicar EXE standalone (single-file)
+
+#### Uma arquitetura (ex.: win-x64)
+
+```powershell
+dotnet publish --configuration Release -r win-x64 --self-contained true `
+  -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true `
+  -o publish\win-x64
+```
+
+#### Todas as arquiteturas (win-x64, win-x86, win-arm64)
+
+```powershell
+$rids = @("win-x64","win-x86","win-arm64")
+foreach ($rid in $rids) {
+  dotnet publish --configuration Release -r $rid --self-contained true `
+    -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true `
+    -o ("publish\" + $rid)
+}
+```
+
+**Saída:** `publish\win-x64\UserTrace.exe` (self-contained; tamanho típico ~85 MB)
 
 ### O que está embutido no EXE
 
