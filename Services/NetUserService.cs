@@ -155,6 +155,8 @@ public static class NetUserService
             AccountExpires    = FormatTimestamp(u.usri3_acct_expires),
 
             PasswordLastSet      = FormatPasswordAge(u.usri3_password_age),
+            BadPasswordCount     = u.usri3_bad_pw_count.ToString(),
+            BadPasswordTime      = ad.BadPasswordTime,
             PasswordNeverExpires = HasFlag(u.usri3_flags, UF_DONT_EXPIRE_PASSWD),
             PasswordExpired      = HasFlag(u.usri3_flags, UF_PASSWORD_EXPIRED),
             PasswordRequired     = !HasFlag(u.usri3_flags, UF_PASSWD_NOTREQD),
@@ -175,7 +177,7 @@ public static class NetUserService
         };
     }
 
-    private readonly record struct AdIdentityProps(string Email, string PhoneNumber, string Office);
+    private readonly record struct AdIdentityProps(string Email, string PhoneNumber, string Office, string BadPasswordTime);
 
     private static AdIdentityProps GetAdIdentityProps(string sam, string? dc)
     {
@@ -193,6 +195,7 @@ public static class NetUserService
             searcher.PropertiesToLoad.Add("mail");
             searcher.PropertiesToLoad.Add("telephoneNumber");
             searcher.PropertiesToLoad.Add("physicalDeliveryOfficeName");
+            searcher.PropertiesToLoad.Add("badPasswordTime");
 
             var result = searcher.FindOne();
             if (result == null) return default;
@@ -207,12 +210,66 @@ public static class NetUserService
             return new AdIdentityProps(
                 Email:       GetProp("mail"),
                 PhoneNumber: GetProp("telephoneNumber"),
-                Office:      GetProp("physicalDeliveryOfficeName"));
+                Office:      GetProp("physicalDeliveryOfficeName"),
+                BadPasswordTime: FormatAdFileTime(GetAdProp(result, "badPasswordTime")));
         }
         catch
         {
             return default;
         }
+    }
+
+    private static object? GetAdProp(SearchResult result, string name)
+    {
+        var props = result.Properties[name];
+        if (props == null || props.Count == 0) return null;
+        return props[0];
+    }
+
+    private static string FormatAdFileTime(object? value)
+    {
+        long fileTime = TryReadAdFileTime(value);
+        if (fileTime <= 0) return "Nunca";
+
+        try
+        {
+            // FILETIME: 100ns intervals since 1601-01-01 (UTC).
+            return DateTime.FromFileTimeUtc(fileTime).ToLocalTime().ToString("dd/MM/yyyy HH:mm");
+        }
+        catch
+        {
+            return "Nunca";
+        }
+    }
+
+    private static long TryReadAdFileTime(object? value)
+    {
+        if (value == null) return 0;
+
+        // DirectoryServices pode retornar Int64 direto.
+        if (value is long l) return l;
+        if (value is int i) return i;
+        if (value is IConvertible c)
+        {
+            try { return c.ToInt64(null); } catch { }
+        }
+
+        // Ou um COM (IADsLargeInteger) com HighPart/LowPart.
+        try
+        {
+            var t = value.GetType();
+            var highProp = t.GetProperty("HighPart");
+            var lowProp  = t.GetProperty("LowPart");
+            if (highProp != null && lowProp != null)
+            {
+                int high = Convert.ToInt32(highProp.GetValue(value, null));
+                int low  = Convert.ToInt32(lowProp.GetValue(value, null));
+                return ((long)high << 32) | (uint)low;
+            }
+        }
+        catch { }
+
+        return 0;
     }
 
     private static string? GetDomainController()

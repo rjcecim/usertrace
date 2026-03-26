@@ -335,6 +335,16 @@
                                     </StackPanel>
                                 </Border>
                             </StackPanel>
+
+                            <StackPanel Grid.Row="2" Grid.Column="0" Spacing="4">
+                                <TextBlock Text="Tentativas de senha inválida" Style="{StaticResource FieldLabelStyle}"/>
+                                <TextBlock x:Name="BadPasswordCountText" Style="{StaticResource FieldValueStyle}"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="2" Grid.Column="1" Spacing="4">
+                                <TextBlock Text="Última tentativa de senha inválida" Style="{StaticResource FieldLabelStyle}"/>
+                                <TextBlock x:Name="BadPasswordTimeText" Style="{StaticResource FieldValueStyle}"/>
+                            </StackPanel>
                         </Grid>
                     </StackPanel>
                 </Border>

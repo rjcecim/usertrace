@@ -55,6 +55,8 @@ public sealed partial class UserInfoPanel : UserControl
         yield return SenhaExpiraText;
         yield return SenhaAlteravelText;
         yield return SenhaObrigText;
+        yield return BadPasswordCountText;
+        yield return BadPasswordTimeText;
 
         // Logon
         yield return UltimoLogonText;
@@ -104,6 +106,8 @@ public sealed partial class UserInfoPanel : UserControl
         // Senha
         SenhaDefinidaText.Text = u.PasswordLastSet;
         SenhaExpiraText.Text   = u.PasswordNeverExpires ? "Nunca" : "Conforme política";
+        BadPasswordCountText.Text = u.BadPasswordCount;
+        BadPasswordTimeText.Text  = u.BadPasswordTime;
 
         SetBadge(SenhaAlteravelBadge, SenhaAlteravelIcon, SenhaAlteravelText,
             u.PasswordChangeable, "Permitida", "Bloqueada",
