@@ -155,7 +155,7 @@ public static class NetUserService
             AccountExpires    = FormatTimestamp(u.usri3_acct_expires),
 
             PasswordLastSet      = FormatPasswordAge(u.usri3_password_age),
-            BadPasswordCount     = u.usri3_bad_pw_count.ToString(),
+            BadPasswordCount     = ad.BadPasswordCount,
             BadPasswordTime      = ad.BadPasswordTime,
             PasswordNeverExpires = HasFlag(u.usri3_flags, UF_DONT_EXPIRE_PASSWD),
             PasswordExpired      = HasFlag(u.usri3_flags, UF_PASSWORD_EXPIRED),
@@ -177,7 +177,12 @@ public static class NetUserService
         };
     }
 
-    private readonly record struct AdIdentityProps(string Email, string PhoneNumber, string Office, string BadPasswordTime);
+    private readonly record struct AdIdentityProps(
+        string Email,
+        string PhoneNumber,
+        string Office,
+        string BadPasswordCount,
+        string BadPasswordTime);
 
     private static AdIdentityProps GetAdIdentityProps(string sam, string? dc)
     {
@@ -195,6 +200,7 @@ public static class NetUserService
             searcher.PropertiesToLoad.Add("mail");
             searcher.PropertiesToLoad.Add("telephoneNumber");
             searcher.PropertiesToLoad.Add("physicalDeliveryOfficeName");
+            searcher.PropertiesToLoad.Add("badPwdCount");
             searcher.PropertiesToLoad.Add("badPasswordTime");
 
             var result = searcher.FindOne();
@@ -211,6 +217,7 @@ public static class NetUserService
                 Email:       GetProp("mail"),
                 PhoneNumber: GetProp("telephoneNumber"),
                 Office:      GetProp("physicalDeliveryOfficeName"),
+                BadPasswordCount: GetProp("badPwdCount"),
                 BadPasswordTime: FormatAdFileTime(GetAdProp(result, "badPasswordTime")));
         }
         catch
