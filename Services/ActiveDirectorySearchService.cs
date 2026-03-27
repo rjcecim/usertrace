@@ -6,6 +6,18 @@ namespace UserTrace.Services;
 
 public static class ActiveDirectorySearchService
 {
+    public static Task<List<string>> GetAllOfficesAsync(CancellationToken cancellationToken = default)
+    {
+        return Task.Run(() => GetAllOfficesCore(cancellationToken), cancellationToken);
+    }
+
+    public static Task<List<SearchResultItem>> GetUsersByOfficeAsync(
+        string officeName,
+        CancellationToken cancellationToken = default)
+    {
+        return Task.Run(() => GetUsersByOfficeCore(officeName, cancellationToken), cancellationToken);
+    }
+
     public static Task<List<SearchResultItem>> SearchByNameAsync(
         string term,
         CancellationToken cancellationToken = default)
@@ -68,6 +80,91 @@ public static class ActiveDirectorySearchService
 
         return results.Values
             .OrderBy(x => x.DisplayName, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
+    }
+
+    private static List<string> GetAllOfficesCore(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+
+        var ldapPath = GetDomainLdapPath();
+        var offices = new HashSet<string>(StringComparer.CurrentCultureIgnoreCase);
+
+        using var root = string.IsNullOrEmpty(ldapPath)
+            ? new DirectoryEntry()
+            : new DirectoryEntry(ldapPath);
+
+        using var searcher = new DirectorySearcher(root)
+        {
+            Filter = "(&(objectCategory=person)(objectClass=user)(physicalDeliveryOfficeName=*)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))",
+            SearchScope = SearchScope.Subtree,
+            SizeLimit = 5000,
+            PageSize = 1000
+        };
+
+        searcher.PropertiesToLoad.Add("physicalDeliveryOfficeName");
+        ct.ThrowIfCancellationRequested();
+
+        using var found = searcher.FindAll();
+        foreach (SearchResult? sr in found)
+        {
+            if (sr == null) continue;
+
+            var office = GetProp(sr, "physicalDeliveryOfficeName").Trim();
+            if (string.IsNullOrWhiteSpace(office)) continue;
+            offices.Add(office);
+        }
+
+        return offices
+            .OrderBy(x => x, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
+    }
+
+    private static List<SearchResultItem> GetUsersByOfficeCore(string officeName, CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+
+        if (string.IsNullOrWhiteSpace(officeName))
+            return [];
+
+        var escapedOffice = EscapeLdapFilterValue(officeName.Trim());
+        var ldapPath = GetDomainLdapPath();
+
+        using var root = string.IsNullOrEmpty(ldapPath)
+            ? new DirectoryEntry()
+            : new DirectoryEntry(ldapPath);
+
+        using var searcher = new DirectorySearcher(root)
+        {
+            Filter = $"(&(objectCategory=person)(objectClass=user)(physicalDeliveryOfficeName={escapedOffice})(!(userAccountControl:1.2.840.113556.1.4.803:=2)))",
+            SearchScope = SearchScope.Subtree,
+            SizeLimit = 5000,
+            PageSize = 1000
+        };
+
+        searcher.PropertiesToLoad.Add("sAMAccountName");
+        searcher.PropertiesToLoad.Add("displayName");
+        ct.ThrowIfCancellationRequested();
+
+        var list = new List<SearchResultItem>();
+        using var found = searcher.FindAll();
+        foreach (SearchResult? sr in found)
+        {
+            if (sr == null) continue;
+
+            var sam = GetProp(sr, "sAMAccountName");
+            if (string.IsNullOrWhiteSpace(sam)) continue;
+
+            list.Add(new SearchResultItem
+            {
+                SamAccountName = sam,
+                DisplayName = GetProp(sr, "displayName")
+            });
+        }
+
+        return list
+            .OrderBy(x => x.DisplayName, StringComparer.CurrentCultureIgnoreCase)
+            .ThenBy(x => x.SamAccountName, StringComparer.OrdinalIgnoreCase)
             .ToList();
     }
 

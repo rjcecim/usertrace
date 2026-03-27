@@ -1,0 +1,265 @@
+<Page
+    x:Class="UserTrace.Views.SetorPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:UserTrace.Views"
+    xmlns:models="using:UserTrace.Models"
+    Background="Transparent">
+
+    <Grid Margin="32,28,32,24" RowSpacing="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Spacing="2">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+                <FontIcon
+                    Glyph="&#xE8B7;"
+                    FontSize="22"
+                    Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                    VerticalAlignment="Center"/>
+                <TextBlock
+                    Text="Busca por Setor"
+                    Style="{StaticResource TitleTextBlockStyle}"
+                    VerticalAlignment="Center"/>
+            </StackPanel>
+            <TextBlock
+                Text="Lista os setores (physicalDeliveryOfficeName) e os usuários de cada setor."
+                Style="{StaticResource PageDescriptionStyle}"/>
+        </StackPanel>
+
+        <Grid Grid.Row="1" ColumnSpacing="8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <TextBox
+                x:Name="FiltroSetorTextBox"
+                Grid.Column="0"
+                PlaceholderText="Filtrar setor (deixe vazio para todos)"
+                KeyDown="FiltroSetorTextBox_KeyDown"
+                IsSpellCheckEnabled="False"
+                FontFamily="Cascadia Mono, Consolas"
+                VerticalAlignment="Center"/>
+
+            <Button
+                x:Name="FiltrarButton"
+                Grid.Column="1"
+                Style="{StaticResource AccentButtonStyle}"
+                Click="FiltrarButton_Click"
+                VerticalAlignment="Bottom"
+                MinWidth="110">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <FontIcon Glyph="&#xE721;" FontSize="14"/>
+                    <TextBlock Text="Filtrar"/>
+                </StackPanel>
+            </Button>
+
+            <Button
+                x:Name="LimparFiltroButton"
+                Grid.Column="2"
+                Click="LimparFiltroButton_Click"
+                VerticalAlignment="Bottom"
+                MinWidth="90">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <FontIcon Glyph="&#xE894;" FontSize="14"/>
+                    <TextBlock Text="Limpar"/>
+                </StackPanel>
+            </Button>
+        </Grid>
+
+        <Grid Grid.Row="2" ColumnSpacing="12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="260" MinWidth="200"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="260" MinWidth="200"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0" Style="{StaticResource MicaContentPanelStyle}">
+                <Grid>
+                    <ProgressRing
+                        x:Name="SetoresLoadingRing"
+                        IsActive="False"
+                        Visibility="Collapsed"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Width="40" Height="40"/>
+
+                    <Grid x:Name="SetoresPanel" RowSpacing="0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="6" Margin="14,10,14,8">
+                            <FontIcon
+                                Glyph="&#xE8B7;"
+                                FontSize="12"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                VerticalAlignment="Center"/>
+                            <TextBlock
+                                x:Name="SetoresContadorText"
+                                Text="Carregando setores…"
+                                Style="{StaticResource CaptionTextBlockStyle}"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        </StackPanel>
+
+                        <ListView
+                            x:Name="SetoresListView"
+                            Grid.Row="1"
+                            SelectionChanged="SetoresListView_SelectionChanged"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Padding="4,0,4,8">
+                            <ListView.ItemTemplate>
+                                <DataTemplate x:DataType="x:String">
+                                    <Grid ColumnSpacing="10" Padding="4,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <Border
+                                            Grid.Column="0"
+                                            Width="32" Height="32"
+                                            CornerRadius="8"
+                                            Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                            BorderThickness="1"
+                                            VerticalAlignment="Center">
+                                            <FontIcon
+                                                Glyph="&#xE8B7;"
+                                                FontSize="14"
+                                                Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"/>
+                                        </Border>
+
+                                        <TextBlock
+                                            Grid.Column="1"
+                                            Text="{x:Bind}"
+                                            Style="{StaticResource BodyStrongTextBlockStyle}"
+                                            TextTrimming="CharacterEllipsis"
+                                            VerticalAlignment="Center"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                        </ListView>
+                    </Grid>
+                </Grid>
+            </Border>
+
+            <Rectangle Grid.Column="1" Style="{StaticResource FluentDividerStyle}"/>
+
+            <Border Grid.Column="2" Style="{StaticResource MicaContentPanelStyle}">
+                <Grid>
+                    <ProgressRing
+                        x:Name="UsuariosLoadingRing"
+                        IsActive="False"
+                        Visibility="Collapsed"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Width="40" Height="40"/>
+
+                    <Grid x:Name="UsuariosPanel" RowSpacing="0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <StackPanel Grid.Row="0" Margin="14,10,14,8" Spacing="4">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon
+                                    Glyph="&#xE77B;"
+                                    FontSize="12"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    VerticalAlignment="Center"/>
+                                <TextBlock
+                                    x:Name="UsuariosContadorText"
+                                    Text="Selecione um setor."
+                                    Style="{StaticResource CaptionTextBlockStyle}"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                            </StackPanel>
+                            <TextBlock
+                                x:Name="SetorSelecionadoText"
+                                Text=""
+                                Style="{StaticResource BodyStrongTextBlockStyle}"
+                                TextTrimming="CharacterEllipsis"
+                                Visibility="Collapsed"/>
+                        </StackPanel>
+
+                        <ListView
+                            x:Name="UsuariosListView"
+                            Grid.Row="1"
+                            SelectionChanged="UsuariosListView_SelectionChanged"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Padding="4,0,4,8">
+                            <ListView.ItemTemplate>
+                                <DataTemplate x:DataType="models:SearchResultItem">
+                                    <Grid ColumnSpacing="10" Padding="4,7">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <Border
+                                            Grid.Column="0"
+                                            Width="30" Height="30"
+                                            CornerRadius="15"
+                                            Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                            BorderThickness="1"
+                                            VerticalAlignment="Center">
+                                            <FontIcon
+                                                Glyph="&#xE77B;"
+                                                FontSize="13"
+                                                Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"/>
+                                        </Border>
+
+                                        <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center">
+                                            <TextBlock
+                                                Text="{x:Bind DisplayName}"
+                                                Style="{StaticResource BodyStrongTextBlockStyle}"
+                                                TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock
+                                                Text="{x:Bind SamAccountName}"
+                                                Style="{StaticResource CaptionTextBlockStyle}"
+                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                FontFamily="Cascadia Mono, Consolas"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                        </ListView>
+                    </Grid>
+                </Grid>
+            </Border>
+
+            <Rectangle Grid.Column="3" Style="{StaticResource FluentDividerStyle}"/>
+
+            <Border Grid.Column="4" Style="{StaticResource MicaContentPanelStyle}">
+                <Grid>
+                    <ProgressRing
+                        x:Name="DetalhesLoadingRing"
+                        IsActive="False"
+                        Visibility="Collapsed"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Width="48" Height="48"/>
+
+                    <local:UserInfoPanel x:Name="DetalhesPanel"/>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+
+</Page>
