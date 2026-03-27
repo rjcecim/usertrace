@@ -93,6 +93,15 @@
                 </NavigationViewItem>
 
                 <NavigationViewItem
+                    x:Name="NavItemSetor"
+                    Content="Busca por Setor"
+                    Tag="Setor">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE8B7;"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+
+                <NavigationViewItem
                     x:Name="NavItemSenhasExpiradas"
                     Content="Senhas Expiradas"
                     Tag="SenhasExpiradas">

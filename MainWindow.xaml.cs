@@ -119,6 +119,7 @@ public sealed partial class MainWindow : WindowEx
                 "Login"             => typeof(LoginPage),
                 "Nome"              => typeof(NomePage),
                 "Grupo"             => typeof(GrupoPage),
+                "Setor"             => typeof(SetorPage),
                 "SenhasExpiradas"   => typeof(SenhasExpiradasPage),
                 "ContasBloqueadas"  => typeof(ContasBloqueadasPage),
                 "ContasDesativadas" => typeof(ContasDesativadasPage),
