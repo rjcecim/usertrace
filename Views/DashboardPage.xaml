@@ -78,7 +78,11 @@
                 </Grid.RowDefinitions>
 
                 <!-- Contas Bloqueadas -->
-                <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource MicaCardStyle}">
+                <Button
+                    Grid.Row="0"
+                    Grid.Column="0"
+                    Style="{StaticResource MicaCardButtonStyle}"
+                    Click="ContasBloqueadasCard_Click">
                     <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="6">
                         <StackPanel
                             Grid.Row="0"
@@ -116,10 +120,14 @@
                             MaxLines="2"
                             TextTrimming="WordEllipsis"/>
                     </Grid>
-                </Border>
+                </Button>
 
                 <!-- Expiram hoje -->
-                <Border Grid.Row="0" Grid.Column="1" Style="{StaticResource MicaCardStyle}">
+                <Button
+                    Grid.Row="0"
+                    Grid.Column="1"
+                    Style="{StaticResource MicaCardButtonStyle}"
+                    Click="ExpiramHojeCard_Click">
                     <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="6">
                         <StackPanel
                             Grid.Row="0"
@@ -157,10 +165,14 @@
                             MaxLines="2"
                             TextTrimming="WordEllipsis"/>
                     </Grid>
-                </Border>
+                </Button>
 
                 <!-- Expiram em 1 semana -->
-                <Border Grid.Row="1" Grid.Column="0" Style="{StaticResource MicaCardStyle}">
+                <Button
+                    Grid.Row="1"
+                    Grid.Column="0"
+                    Style="{StaticResource MicaCardButtonStyle}"
+                    Click="ExpiramEmUmaSemanaCard_Click">
                     <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="6">
                         <StackPanel
                             Grid.Row="0"
@@ -198,10 +210,14 @@
                             MaxLines="2"
                             TextTrimming="WordEllipsis"/>
                     </Grid>
-                </Border>
+                </Button>
 
                 <!-- Troca próximo logon -->
-                <Border Grid.Row="1" Grid.Column="1" Style="{StaticResource MicaCardStyle}">
+                <Button
+                    Grid.Row="1"
+                    Grid.Column="1"
+                    Style="{StaticResource MicaCardButtonStyle}"
+                    Click="TrocaProximoLogonCard_Click">
                     <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="6">
                         <StackPanel
                             Grid.Row="0"
@@ -239,7 +255,7 @@
                             MaxLines="2"
                             TextTrimming="WordEllipsis"/>
                     </Grid>
-                </Border>
+                </Button>
             </Grid>
 
             <!-- Gráfico 1: distribuição diária -->

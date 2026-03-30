@@ -7,6 +7,7 @@ namespace UserTrace;
 public partial class App : Application
 {
     private MainWindow? _window;
+    public static MainWindow? CurrentWindow { get; private set; }
 
     public App()
     {
@@ -16,6 +17,7 @@ public partial class App : Application
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
         _window = new MainWindow();
+        CurrentWindow = _window;
         _window.Activate();
 
         // Maximizar após a janela estar visível.

@@ -15,6 +15,8 @@ namespace UserTrace;
 
 public sealed partial class MainWindow : WindowEx
 {
+    private bool _suppressNavSelectionChanged;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -37,6 +39,46 @@ public sealed partial class MainWindow : WindowEx
         // e TextBlocks com estilo (ex.: PageDescriptionStyle) ficam copiáveis até a próxima navegação.
         ContentFrame.Navigated += ContentFrame_Navigated;
         ContentFrame.Navigate(typeof(DashboardPage));
+    }
+
+    public void NavigateToMenu(string menuTag, object? parameter = null)
+    {
+        var pageType = menuTag switch
+        {
+            "Dashboard"         => typeof(DashboardPage),
+            "Login"             => typeof(LoginPage),
+            "Nome"              => typeof(NomePage),
+            "Grupo"             => typeof(GrupoPage),
+            "Setor"             => typeof(SetorPage),
+            "SenhasExpiradas"   => typeof(SenhasExpiradasPage),
+            "ContasBloqueadas"  => typeof(ContasBloqueadasPage),
+            "ContasDesativadas" => typeof(ContasDesativadasPage),
+            "Sobre"             => typeof(SobrePage),
+            _                   => typeof(LoginPage)
+        };
+
+        var item = menuTag switch
+        {
+            "Dashboard"         => NavItemDashboard,
+            "Login"             => NavItemLogin,
+            "Nome"              => NavItemNome,
+            "Grupo"             => NavItemGrupo,
+            "Setor"             => NavItemSetor,
+            "SenhasExpiradas"   => NavItemSenhasExpiradas,
+            "ContasBloqueadas"  => NavItemContasBloqueadas,
+            "ContasDesativadas" => NavItemContasDesativadas,
+            "Sobre"             => NavItemSobre,
+            _                   => NavItemLogin
+        };
+
+        _suppressNavSelectionChanged = true;
+        NavView.SelectedItem = item;
+        _suppressNavSelectionChanged = false;
+
+        if (ContentFrame.Content?.GetType() == pageType && parameter is null)
+            return;
+
+        ContentFrame.Navigate(pageType, parameter, new EntranceNavigationTransitionInfo());
     }
 
     private void ContentFrame_Navigated(object sender, Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)
@@ -110,29 +152,11 @@ public sealed partial class MainWindow : WindowEx
 
     private void NavView_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
     {
+        if (_suppressNavSelectionChanged) return;
         if (args.SelectedItem is not NavigationViewItem item) return;
 
         var tag = item.Tag?.ToString();
-        var pageType = tag switch
-            {
-                "Dashboard"         => typeof(DashboardPage),
-                "Login"             => typeof(LoginPage),
-                "Nome"              => typeof(NomePage),
-                "Grupo"             => typeof(GrupoPage),
-                "Setor"             => typeof(SetorPage),
-                "SenhasExpiradas"   => typeof(SenhasExpiradasPage),
-                "ContasBloqueadas"  => typeof(ContasBloqueadasPage),
-                "ContasDesativadas" => typeof(ContasDesativadasPage),
-                "Sobre"             => typeof(SobrePage),
-                _                   => typeof(LoginPage)
-            };
-
-        if (ContentFrame.Content?.GetType() == pageType)
-            return;
-
-        // MICA BEST PRACTICE #7 — Transição de navegação suave.
-        // EntranceNavigationTransitionInfo desliza o conteúdo de baixo para cima,
-        // revelando o Mica progressivamente — sensação de profundidade real.
-        ContentFrame.Navigate(pageType, null, new EntranceNavigationTransitionInfo());
+        if (string.IsNullOrWhiteSpace(tag)) return;
+        NavigateToMenu(tag, null);
     }
 }
