@@ -43,6 +43,7 @@ public sealed partial class UserInfoPanel : UserControl
         yield return EmailText;
         yield return PhoneText;
         yield return OfficeText;
+        yield return OrganizationalUnitText;
 
         // Status da conta
         yield return ContaAtivaText;
@@ -89,6 +90,7 @@ public sealed partial class UserInfoPanel : UserControl
         EmailText.Text    = string.IsNullOrWhiteSpace(u.Email) ? "—" : u.Email;
         PhoneText.Text    = string.IsNullOrWhiteSpace(u.PhoneNumber) ? "—" : u.PhoneNumber;
         OfficeText.Text   = string.IsNullOrWhiteSpace(u.Office) ? "—" : u.Office;
+        OrganizationalUnitText.Text = string.IsNullOrWhiteSpace(u.OrganizationalUnit) ? "—" : u.OrganizationalUnit;
 
         // Status da conta
         SetBadge(ContaAtivaBadge, ContaAtivaIcon, ContaAtivaText,
