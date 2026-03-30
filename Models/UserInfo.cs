@@ -12,6 +12,7 @@ public sealed class UserInfo
     public string Email           { get; init; } = string.Empty;
     public string PhoneNumber     { get; init; } = string.Empty; // AD: telephoneNumber (ramal/telefone)
     public string Office          { get; init; } = string.Empty; // AD: physicalDeliveryOfficeName (setor/local)
+    public string OrganizationalUnit { get; init; } = string.Empty; // AD: derived from distinguishedName (first OU after CN)
     public string Comment         { get; init; } = string.Empty;
     public string UserComment     { get; init; } = string.Empty;
 

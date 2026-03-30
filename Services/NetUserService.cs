@@ -168,6 +168,7 @@ public static class NetUserService
             Email             = ad.Email,
             PhoneNumber       = ad.PhoneNumber,
             Office            = ad.Office,
+            OrganizationalUnit = ad.OrganizationalUnit,
             Comment           = u.usri3_comment  ?? string.Empty,
             UserComment       = u.usri3_usr_comment ?? string.Empty,
 
@@ -204,6 +205,7 @@ public static class NetUserService
         string Email,
         string PhoneNumber,
         string Office,
+        string OrganizationalUnit,
         string BadPasswordCount,
         string BadPasswordTime,
         string LockoutTime,
@@ -226,6 +228,7 @@ public static class NetUserService
             searcher.PropertiesToLoad.Add("mail");
             searcher.PropertiesToLoad.Add("telephoneNumber");
             searcher.PropertiesToLoad.Add("physicalDeliveryOfficeName");
+            searcher.PropertiesToLoad.Add("distinguishedName");
             searcher.PropertiesToLoad.Add("badPwdCount");
             searcher.PropertiesToLoad.Add("badPasswordTime");
             searcher.PropertiesToLoad.Add("lockoutTime");
@@ -245,6 +248,7 @@ public static class NetUserService
                 Email:       GetProp("mail"),
                 PhoneNumber: GetProp("telephoneNumber"),
                 Office:      GetProp("physicalDeliveryOfficeName"),
+                OrganizationalUnit: ExtractFirstOuAfterCn(GetProp("distinguishedName")),
                 BadPasswordCount: GetProp("badPwdCount"),
                 BadPasswordTime: FormatAdFileTime(GetAdProp(result, "badPasswordTime"), zeroText: "Nunca"),
                 LockoutTime:     FormatAdFileTime(GetAdProp(result, "lockoutTime"),    zeroText: "Não bloqueada"),
@@ -255,6 +259,32 @@ public static class NetUserService
         {
             return default;
         }
+    }
+
+    private static string ExtractFirstOuAfterCn(string distinguishedName)
+    {
+        if (string.IsNullOrWhiteSpace(distinguishedName)) return string.Empty;
+
+        var parts = distinguishedName.Split(',');
+        var seenCn = false;
+        foreach (var part in parts)
+        {
+            var t = part.Trim();
+            if (!seenCn)
+            {
+                if (t.StartsWith("CN=", StringComparison.OrdinalIgnoreCase))
+                    seenCn = true;
+                continue;
+            }
+
+            if (t.StartsWith("OU=", StringComparison.OrdinalIgnoreCase))
+                return t.Length > 3 ? t[3..] : string.Empty;
+
+            if (t.StartsWith("DC=", StringComparison.OrdinalIgnoreCase))
+                break;
+        }
+
+        return string.Empty;
     }
 
     private static object? GetAdProp(SearchResult result, string name)
