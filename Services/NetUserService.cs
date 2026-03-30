@@ -248,7 +248,7 @@ public static class NetUserService
                 Email:       GetProp("mail"),
                 PhoneNumber: GetProp("telephoneNumber"),
                 Office:      GetProp("physicalDeliveryOfficeName"),
-                OrganizationalUnit: ExtractFirstOuAfterCn(GetProp("distinguishedName")),
+                OrganizationalUnit: ExtractOuPathUntilTribunal(GetProp("distinguishedName")),
                 BadPasswordCount: GetProp("badPwdCount"),
                 BadPasswordTime: FormatAdFileTime(GetAdProp(result, "badPasswordTime"), zeroText: "Nunca"),
                 LockoutTime:     FormatAdFileTime(GetAdProp(result, "lockoutTime"),    zeroText: "Não bloqueada"),
@@ -261,11 +261,19 @@ public static class NetUserService
         }
     }
 
-    private static string ExtractFirstOuAfterCn(string distinguishedName)
+    private static string ExtractOuPathUntilTribunal(string distinguishedName)
     {
         if (string.IsNullOrWhiteSpace(distinguishedName)) return string.Empty;
 
+        // Ex.:
+        // CN=0101093,OU=CIS,OU=SETIN,OU=Tribunal,DC=tce,DC=pa   => SETIN\CIS
+        // CN=0100054,OU=CPA,OU=DILP,OU=SEADM,OU=Tribunal,...    => SEADM\DILP\CPA
+        //
+        // Regra: pega as OUs após o CN até (mas sem incluir) a OU=Tribunal,
+        // inverte (da OU mais alta para a mais próxima do CN) e junta com "\".
         var parts = distinguishedName.Split(',');
+
+        var ous = new List<string>(capacity: 6);
         var seenCn = false;
         foreach (var part in parts)
         {
@@ -278,13 +286,23 @@ public static class NetUserService
             }
 
             if (t.StartsWith("OU=", StringComparison.OrdinalIgnoreCase))
-                return t.Length > 3 ? t[3..] : string.Empty;
+            {
+                var ou = t.Length > 3 ? t[3..] : string.Empty;
+                if (string.Equals(ou, "Tribunal", StringComparison.OrdinalIgnoreCase))
+                    break;
+
+                if (!string.IsNullOrWhiteSpace(ou))
+                    ous.Add(ou);
+                continue;
+            }
 
             if (t.StartsWith("DC=", StringComparison.OrdinalIgnoreCase))
                 break;
         }
 
-        return string.Empty;
+        if (ous.Count == 0) return string.Empty;
+        ous.Reverse();
+        return string.Join("\\", ous);
     }
 
     private static object? GetAdProp(SearchResult result, string name)
