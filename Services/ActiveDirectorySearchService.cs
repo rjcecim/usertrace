@@ -88,7 +88,9 @@ public static class ActiveDirectorySearchService
         ct.ThrowIfCancellationRequested();
 
         var ldapPath = GetDomainLdapPath();
-        var offices = new HashSet<string>(StringComparer.CurrentCultureIgnoreCase);
+        // Comparação ordinal para não "normalizar" acentos/cultura e manter setores distintos
+        // quando houver variação de escrita (ex.: com/sem acento).
+        var offices = new HashSet<string>(StringComparer.Ordinal);
 
         using var root = string.IsNullOrEmpty(ldapPath)
             ? new DirectoryEntry()
@@ -116,7 +118,7 @@ public static class ActiveDirectorySearchService
         }
 
         return offices
-            .OrderBy(x => x, StringComparer.CurrentCultureIgnoreCase)
+            .OrderBy(x => x, StringComparer.Ordinal)
             .ToList();
     }
 
@@ -144,6 +146,7 @@ public static class ActiveDirectorySearchService
 
         searcher.PropertiesToLoad.Add("sAMAccountName");
         searcher.PropertiesToLoad.Add("displayName");
+        searcher.PropertiesToLoad.Add("physicalDeliveryOfficeName");
         ct.ThrowIfCancellationRequested();
 
         var list = new List<SearchResultItem>();
@@ -151,6 +154,12 @@ public static class ActiveDirectorySearchService
         foreach (SearchResult? sr in found)
         {
             if (sr == null) continue;
+
+            // O AD pode considerar strings equivalentes (ex.: com/sem acento) no match do filtro.
+            // Aqui garantimos match EXATO (incluindo acentos) com base no valor retornado.
+            var officeFromAd = GetProp(sr, "physicalDeliveryOfficeName");
+            if (!string.Equals(officeFromAd, officeName, StringComparison.Ordinal))
+                continue;
 
             var sam = GetProp(sr, "sAMAccountName");
             if (string.IsNullOrWhiteSpace(sam)) continue;
