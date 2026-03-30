@@ -8,6 +8,7 @@ using Microsoft.UI.Xaml.Media;
 using SkiaSharp;
 using System.Linq;
 using System.Globalization;
+using UserTrace.Models;
 using UserTrace.Services;
 
 namespace UserTrace.Views;
@@ -57,6 +58,30 @@ public sealed partial class DashboardPage : Page
 
     private void AtualizarButton_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e) =>
         _ = CarregarAsync();
+
+    private void ContasBloqueadasCard_Click(object sender, RoutedEventArgs e) =>
+        App.CurrentWindow?.NavigateToMenu("ContasBloqueadas");
+
+    private void ExpiramHojeCard_Click(object sender, RoutedEventArgs e) =>
+        App.CurrentWindow?.NavigateToMenu(
+            "SenhasExpiradas",
+            new SenhasExpiradasNavigationPreset(SenhasExpiradasTipoBuscaPreset.Hoje));
+
+    private void ExpiramEmUmaSemanaCard_Click(object sender, RoutedEventArgs e)
+    {
+        var today = DateTime.Today;
+        App.CurrentWindow?.NavigateToMenu(
+            "SenhasExpiradas",
+            new SenhasExpiradasNavigationPreset(
+                SenhasExpiradasTipoBuscaPreset.Intervalo,
+                new DateTimeOffset(today),
+                new DateTimeOffset(today.AddDays(6))));
+    }
+
+    private void TrocaProximoLogonCard_Click(object sender, RoutedEventArgs e) =>
+        App.CurrentWindow?.NavigateToMenu(
+            "SenhasExpiradas",
+            new SenhasExpiradasNavigationPreset(SenhasExpiradasTipoBuscaPreset.ProximoLogon));
 
     private async Task CarregarAsync()
     {

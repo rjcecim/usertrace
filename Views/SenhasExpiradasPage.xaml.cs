@@ -1,6 +1,7 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Navigation;
 using UserTrace.Helpers;
 using UserTrace.Models;
 using UserTrace.Services;
@@ -10,6 +11,7 @@ namespace UserTrace.Views;
 public sealed partial class SenhasExpiradasPage : Page
 {
     private CancellationTokenSource? _cts;
+    private bool _autoSearchRequested;
 
     public SenhasExpiradasPage()
     {
@@ -19,6 +21,39 @@ public sealed partial class SenhasExpiradasPage : Page
         DataFimPicker.Date = hoje.AddDays(7);
         DataEspecificaPicker.Date = hoje;
         TipoBuscaCombo.SelectedIndex = 0;
+    }
+
+    protected override void OnNavigatedTo(NavigationEventArgs e)
+    {
+        base.OnNavigatedTo(e);
+
+        if (e.Parameter is not SenhasExpiradasNavigationPreset preset)
+            return;
+
+        _autoSearchRequested = true;
+
+        switch (preset.Tipo)
+        {
+            case SenhasExpiradasTipoBuscaPreset.Hoje:
+                TipoBuscaCombo.SelectedIndex = 2;
+                break;
+            case SenhasExpiradasTipoBuscaPreset.Intervalo:
+                TipoBuscaCombo.SelectedIndex = 1;
+                if (preset.DataInicio != null) DataInicioPicker.Date = preset.DataInicio.Value;
+                if (preset.DataFim != null) DataFimPicker.Date = preset.DataFim.Value;
+                break;
+            case SenhasExpiradasTipoBuscaPreset.ProximoLogon:
+                TipoBuscaCombo.SelectedIndex = 3;
+                break;
+        }
+
+        // Aguarda a UI aplicar SelectionChanged/visibilidades e então dispara a busca.
+        DispatcherQueue.TryEnqueue(async () =>
+        {
+            if (!_autoSearchRequested) return;
+            _autoSearchRequested = false;
+            await ExecutarBuscaAsync();
+        });
     }
 
     private void ResultadoListView_DoubleTapped(object sender, DoubleTappedRoutedEventArgs e)
