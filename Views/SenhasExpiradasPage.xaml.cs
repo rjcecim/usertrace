@@ -34,6 +34,10 @@ public sealed partial class SenhasExpiradasPage : Page
 
         switch (preset.Tipo)
         {
+            case SenhasExpiradasTipoBuscaPreset.DataEspecifica:
+                TipoBuscaCombo.SelectedIndex = 0;
+                if (preset.DataInicio != null) DataEspecificaPicker.Date = preset.DataInicio.Value;
+                break;
             case SenhasExpiradasTipoBuscaPreset.Hoje:
                 TipoBuscaCombo.SelectedIndex = 2;
                 break;

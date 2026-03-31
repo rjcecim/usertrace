@@ -1,6 +1,9 @@
 using LiveChartsCore;
+using LiveChartsCore.Kernel;
+using LiveChartsCore.Kernel.Sketches;
 using LiveChartsCore.Measure;
 using LiveChartsCore.SkiaSharpView;
+using LiveChartsCore.SkiaSharpView.Drawing.Geometries;
 using LiveChartsCore.SkiaSharpView.Painting;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -208,17 +211,20 @@ public sealed partial class DashboardPage : Page
         var fillPaint = new SolidColorPaint(accentFillWithAlpha);
 
         // Gráfico 1: distribuição diária (hoje até +6).
+        var expiracoesPorDiaSeries = new ColumnSeries<int>
+        {
+            Name = "Expirações",
+            Values = _distribution7,
+            Fill = fillPaint,
+            Stroke = null,
+            // Removemos data labels para evitar sobreposição em telas menores.
+            DataLabelsPaint = null
+        };
+        expiracoesPorDiaSeries.ChartPointPointerDown += ExpiracoesPorDiaSeries_ChartPointPointerDown;
+
         ExpiracoesPorDiaChart.Series = new ISeries[]
         {
-            new ColumnSeries<int>
-            {
-                Name = "Expirações",
-                Values = _distribution7,
-                Fill = fillPaint,
-                Stroke = null,
-                // Removemos data labels para evitar sobreposição em telas menores.
-                DataLabelsPaint = null
-            }
+            expiracoesPorDiaSeries
         };
 
         ExpiracoesPorDiaChart.XAxes = new Axis[]
@@ -268,6 +274,25 @@ public sealed partial class DashboardPage : Page
                 LabelsPaint = axisLabelsPaint
             }
         };
+    }
+
+    private void ExpiracoesPorDiaSeries_ChartPointPointerDown(
+        IChartView chart,
+        ChartPoint<int, RoundedRectangleGeometry, LabelGeometry>? point)
+    {
+        if (point is null) return;
+
+        // No gráfico diário, o índice 0..6 corresponde a hoje..+6.
+        var idx = point.Index;
+        if (idx < 0 || idx > 6) return;
+
+        var data = DateTime.Today.AddDays(idx).Date;
+
+        App.CurrentWindow?.NavigateToMenu(
+            "SenhasExpiradas",
+            new SenhasExpiradasNavigationPreset(
+                SenhasExpiradasTipoBuscaPreset.DataEspecifica,
+                new DateTimeOffset(data)));
     }
 }
 
