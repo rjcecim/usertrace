@@ -2,6 +2,7 @@ namespace UserTrace.Models;
 
 public enum SenhasExpiradasTipoBuscaPreset
 {
+    DataEspecifica,
     Hoje,
     Intervalo,
     ProximoLogon
