@@ -8,12 +8,13 @@
 4. [Models](#4-models)
 5. [Services](#5-services)
 6. [Views](#6-views)
-7. [Seleção de Texto e Cópia](#7-seleção-de-texto-e-cópia)
-8. [Fluxo de Dados](#8-fluxo-de-dados)
-9. [Sistema Visual Mica](#9-sistema-visual-mica)
-10. [Build e Publicação](#10-build-e-publicação)
-11. [Segurança e Permissões](#11-segurança-e-permissões)
-12. [Convenções de código](#12-convenções-de-código)
+7. [Dashboard (KPIs e gráficos)](#7-dashboard-kpis-e-gráficos)
+8. [Seleção de Texto e Cópia](#8-seleção-de-texto-e-cópia)
+9. [Fluxo de Dados](#9-fluxo-de-dados)
+10. [Sistema Visual Mica](#10-sistema-visual-mica)
+11. [Build e Publicação](#11-build-e-publicação)
+12. [Segurança e Permissões](#12-segurança-e-permissões)
+13. [Convenções de código](#13-convenções-de-código)
 
 ---
 
@@ -54,6 +55,7 @@ usertrace/
 │   ├── CommandResult.cs
 │   ├── GroupItem.cs
 │   ├── SearchResultItem.cs
+│   ├── SenhasExpiradasNavigationPreset.cs
 │   ├── SenhaExpiraDisplay.cs
 │   ├── SenhaExpiraItem.cs
 │   └── UserInfo.cs
@@ -62,12 +64,14 @@ usertrace/
 │   ├── GroupService.cs
 │   └── NetUserService.cs
 └── Views/
+    ├── DashboardPage.xaml / .cs
     ├── ContasBloqueadasPage.xaml / .cs
     ├── ContasDesativadasPage.xaml / .cs
     ├── GrupoPage.xaml / .cs
     ├── LoginPage.xaml / .cs
     ├── NomePage.xaml / .cs
     ├── SenhasExpiradasPage.xaml / .cs
+    ├── SetorPage.xaml / .cs
     ├── SobrePage.xaml / .cs
     └── UserInfoPanel.xaml / .cs
 ```
@@ -94,6 +98,7 @@ usertrace/
 
 | Pacote | Versão |
 |---|---|
+| `LiveChartsCore.SkiaSharpView.WinUI` | 2.0.0-rc6.1 |
 | `Microsoft.WindowsAppSDK` | 1.8.260209005 |
 | `Microsoft.Windows.SDK.BuildTools` | 10.0.26100.4654 |
 | `WinUIEx` | 2.9.0 |
@@ -198,6 +203,25 @@ O `GroupType` é derivado do atributo `groupType` (bitmask):
 - `0x4` → Local
 - `0x8` → Universal
 
+### `SenhasExpiradasNavigationPreset`
+
+Payload de navegação para abrir a página **Senhas Expiradas** já com o tipo de busca e datas pré-configurados (usado principalmente no **Dashboard**).
+
+```csharp
+public enum SenhasExpiradasTipoBuscaPreset
+{
+    DataEspecifica,
+    Hoje,
+    Intervalo,
+    ProximoLogon
+}
+
+public sealed record SenhasExpiradasNavigationPreset(
+    SenhasExpiradasTipoBuscaPreset Tipo,
+    DateTimeOffset? DataInicio = null,
+    DateTimeOffset? DataFim = null);
+```
+
 ---
 
 ## 5. Services
@@ -245,6 +269,17 @@ Busca usuários por nome parcial via LDAP.
 1. `Domain.GetComputerDomain().Name`
 2. Variável de ambiente `USERDNSDOMAIN`
 3. `Environment.UserDomainName`
+
+### Setores (physicalDeliveryOfficeName)
+
+O serviço também expõe consultas baseadas no atributo **`physicalDeliveryOfficeName`** (UI: “Busca por Setor”):
+
+- **GetAllOfficesAsync(ct)**: lista os setores distintos de usuários **ativos** que possuam `physicalDeliveryOfficeName`.
+  - Filtro: `(&(objectCategory=person)(objectClass=user)(physicalDeliveryOfficeName=*)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))`
+  - Observação: deduplicação com `StringComparer.Ordinal` para preservar diferenças de escrita (ex.: com/sem acento).
+- **GetUsersByOfficeAsync(officeName, ct)**: lista usuários **ativos** do setor.
+  - Filtro base: `physicalDeliveryOfficeName=<office>`
+  - Observação: após o LDAP, há validação de **match exato** com `StringComparison.Ordinal` no valor retornado, para evitar equivalências “flexíveis” do AD (ex.: acentuação).
 
 ### `GroupService`
 
@@ -320,15 +355,33 @@ Janela principal herdando de `WindowEx` (WinUIEx).
 
 | Tag | Página | Ícone (Segoe MDL2 Assets) |
 |---|---|---|
+| `Dashboard` | `DashboardPage` | `E9D2` (dashboard) |
 | `Login` | `LoginPage` | `E77B` (pessoa) |
 | `Nome` | `NomePage` | `E721` (lupa) |
 | `Grupo` | `GrupoPage` | `E902` (grupo) |
+| `Setor` | `SetorPage` | `E8B7` (building/office) |
 | `SenhasExpiradas` | `SenhasExpiradasPage` | `E121` (cadeado/senha) |
 | `ContasBloqueadas` | `ContasBloqueadasPage` | `E72E` (cadeado) |
 | `ContasDesativadas` | `ContasDesativadasPage` | `E711` (proibido) |
 | `Sobre` | `SobrePage` | `E946` (info) |
 
 Transição de navegação: `EntranceNavigationTransitionInfo` (desliza de baixo para cima).
+
+---
+
+### `DashboardPage`
+
+Página inicial com **KPIs** e **gráficos** (LiveCharts) para visão geral:
+
+- Contas bloqueadas (LDAP `lockoutTime >= 1`)
+- Senhas que expiram hoje
+- Senhas que expiram na janela de 7 dias (hoje..+6), incluindo distribuição diária
+- Contas obrigadas a trocar no próximo logon (LDAP `pwdLastSet = 0`)
+
+**Comportamento:**
+- Carrega automaticamente ao abrir (evento `Loaded`)
+- Botão **Atualizar** refaz as consultas
+- Cards KPI e colunas do gráfico navegam para `ContasBloqueadas` ou `SenhasExpiradas` com `SenhasExpiradasNavigationPreset`
 
 ---
 
@@ -421,6 +474,25 @@ MembrosListView_SelectionChanged
 
 ---
 
+### `SetorPage`
+
+Lista setores (atributo `physicalDeliveryOfficeName`) e usuários de cada setor, com layout de 3 colunas (setores → usuários → detalhes).
+
+**Comportamento:**
+- Ao abrir (evento `Loaded`), carrega automaticamente a lista de setores
+- Campo **Filtrar** restringe a lista de setores (vazio = todos)
+- Ao selecionar um setor, carrega a lista de usuários daquele setor (somente contas ativas)
+- Ao selecionar um usuário, carrega os detalhes completos via `NetUserService` no `UserInfoPanel`
+
+**Fluxo:**
+```
+Loaded → ActiveDirectorySearchService.GetAllOfficesAsync()
+Seleciona setor → ActiveDirectorySearchService.GetUsersByOfficeAsync(setor)
+Seleciona usuário → NetUserService.GetUserDetailsAsync(sam)
+```
+
+---
+
 ### `SenhasExpiradasPage`
 
 Lista contas com senha expirando (política 180 dias) ou obrigadas a trocar no próximo logon.
@@ -433,6 +505,11 @@ Lista contas com senha expirando (política 180 dias) ou obrigadas a trocar no p
 - `ResultadoListView` — lista de `SenhaExpiraDisplay` (nome, login, data de expiração)
 
 **Duplo clique:** `ResultadoListView_DoubleTapped` → se o item é `SenhaExpiraDisplay`, navega para `LoginPage` com `SamAccountName`; a Busca por Login preenche o campo e executa a busca, exibindo os detalhes do usuário.
+
+**Navegação com preset (Dashboard):** ao abrir via `Frame.Navigate(typeof(SenhasExpiradasPage), preset)`, `OnNavigatedTo` aplica:
+- tipo (Data específica / Intervalo / Hoje / Próximo logon)
+- datas (quando aplicável)
+e dispara automaticamente `ExecutarBuscaAsync()` após a UI aplicar `SelectionChanged`/visibilidades.
 
 **Fluxo:** `BuscarButton_Click` → `ExecutarBuscaAsync()` conforme o tag do ComboBox; chama `GetPasswordExpiringInRangeAsync`, `GetPasswordExpiringOnDateAsync`, `GetPasswordExpiringTodayAsync` ou `GetMustChangePasswordAtNextLogonAsync` do `ActiveDirectorySearchService`.
 
@@ -521,7 +598,27 @@ Página estática com informações do aplicativo, organizada em cards Mica:
 
 ---
 
-## 7. Seleção de Texto e Cópia
+## 7. Dashboard (KPIs e gráficos)
+
+A página `DashboardPage` oferece uma visão geral das contas do AD e atalhos para as páginas de detalhe.
+
+### Consultas (em paralelo)
+
+Na carga (e ao clicar em **Atualizar**), o Dashboard executa em paralelo:
+
+- `GetLockedOutAccountsAsync` → KPI “Contas Bloqueadas”
+- `GetPasswordExpiringTodayAsync` → KPI “Contas que expiram hoje”
+- `GetPasswordExpiringInRangeAsync(hoje, hoje+6)` → KPI “Contas que expiram em 1 semana” e distribuição diária (7 dias)
+- `GetMustChangePasswordAtNextLogonAsync` → KPI “Troca no próximo logon”
+
+### Interação
+
+- **Cards KPI clicáveis:** navegam para a página correspondente.
+- **Gráfico de distribuição diária:** clicar em uma coluna navega para `SenhasExpiradas` com preset “Data específica” (hoje..+6).
+
+---
+
+## 8. Seleção de Texto e Cópia
 
 No app, só o **UserInfoPanel** permite seleção/cópia de texto. Nele, só os **valores** dos quatro cards principais (Identidade, Status da conta, Senha e Logon) são selecionáveis — não os rótulos nem os grupos. Fora desse painel, a seleção de `TextBlock` fica desligada.
 
@@ -549,7 +646,7 @@ No app, só o **UserInfoPanel** permite seleção/cópia de texto. Nele, só os 
 
 ---
 
-## 8. Fluxo de Dados
+## 9. Fluxo de Dados
 
 ```
 Usuário digita login/nome/grupo
@@ -579,7 +676,7 @@ Usuário digita login/nome/grupo
 
 ---
 
-## 9. Sistema Visual Mica
+## 10. Sistema Visual Mica
 
 O app implementa o sistema de camadas Mica do Fluent Design:
 
@@ -603,7 +700,7 @@ O app implementa o sistema de camadas Mica do Fluent Design:
 
 ---
 
-## 10. Build e Publicação
+## 11. Build e Publicação
 
 ### Compilar (Release)
 
@@ -644,7 +741,7 @@ foreach ($rid in $rids) {
 
 ---
 
-## 11. Segurança e Permissões
+## 12. Segurança e Permissões
 
 **UAC (`requireAdministrator`):** O app solicita elevação ao iniciar. Necessário para:
 - `NetUserGetInfo` (level 3) — requer privilégios de administrador de domínio ou local
@@ -659,7 +756,7 @@ foreach ($rid in $rids) {
 
 ---
 
-## 12. Convenções de código
+## 13. Convenções de código
 
 - **Namespaces:** `UserTrace` (app shell), `UserTrace.Views`, `UserTrace.Services`, `UserTrace.Models`, `UserTrace.Converters`, `UserTrace.Helpers`.
 - **Helpers (`UserTrace/Helpers/`):** lógica reutilizável sem dependência de XAML de página — seleção de texto (`TextSelectionHelper`), navegação (`FrameNavigationExtensions`), textos de contagem (`ContagemPt`).
