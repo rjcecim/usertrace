@@ -15,7 +15,27 @@
 
 ---
 
+## 🧭 Guia rápido
+
+- **Menu lateral**
+  - **Dashboard**: visão geral (KPIs + gráficos) e atalhos de navegação
+  - **Busca por Login**: detalhes completos pelo `sAMAccountName`
+  - **Busca por Nome / Grupo / Setor**: encontre e selecione para abrir os detalhes
+  - **Senhas Expiradas / Contas Bloqueadas / Contas Desativadas**: listas com **duplo clique** para abrir detalhes na Busca por Login
+
+---
+
 ## ✨ Funcionalidades
+
+### 📊 Dashboard
+Visão geral com **KPIs** e **gráficos** (LiveCharts) para:
+
+- **Contas Bloqueadas** (LDAP `lockoutTime >= 1`)
+- **Senhas que expiram hoje** (cálculo a partir de `pwdLastSet` + política de **180 dias**)
+- **Senhas que expiram em 1 semana** (janela de 7 dias)
+- **Obrigados a trocar no próximo logon** (LDAP `pwdLastSet = 0`)
+
+Os cards e pontos do gráfico são clicáveis e já navegam para a tela correspondente com a busca pré-configurada.
 
 ### 👤 Busca por Login
 Informe o `sAMAccountName` de um usuário e visualize instantaneamente todas as informações da conta: nome completo, status, configurações de senha (incluindo **bloqueio/lockout**, última definição e **dias para expirar**), último logon, grupos locais e grupos globais.
@@ -25,6 +45,9 @@ Pesquise usuários pelo nome parcial. O app lista os resultados encontrados no A
 
 ### 🏢 Busca por Grupo
 Ao abrir, a lista de grupos do domínio é carregada automaticamente. Use o campo de filtro e o botão **Buscar** para restringir por nome; deixe vazio e clique em **Buscar** (ou **Limpar**) para listar todos. Selecione um grupo para ver os membros — incluindo subgrupos (resolução recursiva). Selecione um membro para ver os detalhes completos da conta.
+
+### 🧩 Busca por Setor
+Lista os setores usando o atributo **`physicalDeliveryOfficeName`** e, ao selecionar um setor, lista os usuários daquele setor (somente contas ativas). Selecione um usuário para ver os detalhes completos da conta.
 
 ### 🔑 Senhas Expiradas
 Consulte contas com senha expirando em data específica, em intervalo de datas, expirando hoje ou **obrigadas a trocar no próximo logon** (lista em ordem alfabética). Dê **dois cliques** em um usuário para ir direto para a Busca por Login com os detalhes desse usuário.
@@ -125,6 +148,7 @@ O EXE gerado em `publish\win-x64\UserTrace.exe` é **self-contained**, **comprim
 | .NET | 10 |
 | WinUI 3 / Windows App SDK | 1.8.260209005 |
 | WinUIEx | 2.9.0 |
+| LiveCharts (WinUI) | 2.0.0-rc6.1 |
 | Mica Backdrop | Windows 11 |
 | System.DirectoryServices | 9.0.2 |
 | P/Invoke `netapi32.dll` | Win32 API |
