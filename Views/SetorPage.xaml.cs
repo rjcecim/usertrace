@@ -9,6 +9,7 @@ namespace UserTrace.Views;
 
 public sealed partial class SetorPage : Page
 {
+    private const string SetorSemOffice = "(Sem setor)";
     private List<string> _todosSetores = [];
     private CancellationTokenSource? _ctsSetores;
     private CancellationTokenSource? _ctsUsuarios;
@@ -54,7 +55,7 @@ public sealed partial class SetorPage : Page
         {
             var setores = await ActiveDirectorySearchService.GetAllOfficesAsync(ct);
 
-            _todosSetores = setores;
+            _todosSetores = [SetorSemOffice, .. setores];
             AplicarFiltroSetores();
         }
         catch (OperationCanceledException)
@@ -122,7 +123,9 @@ public sealed partial class SetorPage : Page
 
         try
         {
-            var usuarios = await ActiveDirectorySearchService.GetUsersByOfficeAsync(setor, ct);
+            var usuarios = setor == SetorSemOffice
+                ? await ActiveDirectorySearchService.GetUsersWithoutOfficeAsync(ct)
+                : await ActiveDirectorySearchService.GetUsersByOfficeAsync(setor, ct);
             UsuariosListView.ItemsSource = usuarios;
 
             UsuariosContadorText.Text = ContagemPt.Texto(

@@ -18,6 +18,11 @@ public static class ActiveDirectorySearchService
         return Task.Run(() => GetUsersByOfficeCore(officeName, cancellationToken), cancellationToken);
     }
 
+    public static Task<List<SearchResultItem>> GetUsersWithoutOfficeAsync(CancellationToken cancellationToken = default)
+    {
+        return Task.Run(() => GetUsersWithoutOfficeCore(cancellationToken), cancellationToken);
+    }
+
     public static Task<List<SearchResultItem>> SearchByNameAsync(
         string term,
         CancellationToken cancellationToken = default)
@@ -160,6 +165,49 @@ public static class ActiveDirectorySearchService
             var officeFromAd = GetProp(sr, "physicalDeliveryOfficeName");
             if (!string.Equals(officeFromAd, officeName, StringComparison.Ordinal))
                 continue;
+
+            var sam = GetProp(sr, "sAMAccountName");
+            if (string.IsNullOrWhiteSpace(sam)) continue;
+
+            list.Add(new SearchResultItem
+            {
+                SamAccountName = sam,
+                DisplayName = GetProp(sr, "displayName")
+            });
+        }
+
+        return list
+            .OrderBy(x => x.DisplayName, StringComparer.CurrentCultureIgnoreCase)
+            .ThenBy(x => x.SamAccountName, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static List<SearchResultItem> GetUsersWithoutOfficeCore(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+
+        var ldapPath = GetDomainLdapPath();
+        using var root = string.IsNullOrEmpty(ldapPath)
+            ? new DirectoryEntry()
+            : new DirectoryEntry(ldapPath);
+
+        using var searcher = new DirectorySearcher(root)
+        {
+            Filter = "(&(objectCategory=person)(objectClass=user)(!(physicalDeliveryOfficeName=*))(!(userAccountControl:1.2.840.113556.1.4.803:=2)))",
+            SearchScope = SearchScope.Subtree,
+            SizeLimit = 5000,
+            PageSize = 1000
+        };
+
+        searcher.PropertiesToLoad.Add("sAMAccountName");
+        searcher.PropertiesToLoad.Add("displayName");
+        ct.ThrowIfCancellationRequested();
+
+        var list = new List<SearchResultItem>();
+        using var found = searcher.FindAll();
+        foreach (SearchResult? sr in found)
+        {
+            if (sr == null) continue;
 
             var sam = GetProp(sr, "sAMAccountName");
             if (string.IsNullOrWhiteSpace(sam)) continue;
