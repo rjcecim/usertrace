@@ -85,6 +85,7 @@
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto"/>
                                         <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
                                     <Border
                                         Width="32" Height="32"
@@ -106,6 +107,13 @@
                                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                                    FontFamily="Cascadia Mono, Consolas"/>
                                     </StackPanel>
+                                    <TextBlock
+                                        Grid.Column="2"
+                                        Text="{x:Bind LockoutTime, Mode=OneWay}"
+                                        Style="{StaticResource CaptionTextBlockStyle}"
+                                        Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                                        VerticalAlignment="Center"
+                                        FontFamily="Cascadia Mono, Consolas"/>
                                 </Grid>
                             </DataTemplate>
                         </ListView.ItemTemplate>

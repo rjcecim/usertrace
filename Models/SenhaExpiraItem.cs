@@ -6,5 +6,5 @@ public sealed class SenhaExpiraItem
     public string DisplayName    { get; init; } = string.Empty;
     public DateTime Expira       { get; init; }
 
-    public override string ToString() => $"{SamAccountName} - {Expira:dd/MM/yyyy}";
+    public override string ToString() => $"{SamAccountName} - {Expira:dd/MM/yyyy HH:mm}";
 }

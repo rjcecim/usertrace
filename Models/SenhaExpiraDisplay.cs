@@ -12,7 +12,7 @@ public sealed class SenhaExpiraDisplay
     {
         SamAccountName = item.SamAccountName,
         DisplayName    = item.DisplayName,
-        DataExpira     = item.Expira.ToString("dd/MM/yyyy")
+        DataExpira     = item.Expira.ToString("dd/MM/yyyy HH:mm")
     };
 
     /// <summary>Lista LDAP retorna <see cref="SearchResultItem"/> (sem data de expiração).</summary>

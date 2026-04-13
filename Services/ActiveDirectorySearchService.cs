@@ -344,7 +344,7 @@ public static class ActiveDirectorySearchService
     public static Task<List<SearchResultItem>> GetLockedOutAccountsAsync(CancellationToken cancellationToken = default)
     {
         const string filter = "(&(objectCategory=person)(objectClass=user)(lockoutTime>=1)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))";
-        return Task.Run(() => SearchByLdapFilterAsync(filter, cancellationToken), cancellationToken);
+        return Task.Run(() => GetLockedOutAccountsCore(filter, cancellationToken), cancellationToken);
     }
 
     /// <summary>Contas com userAccountControl bit 2 (ADS_UF_ACCOUNTDISABLE) = desativadas.</summary>
@@ -386,6 +386,48 @@ public static class ActiveDirectorySearchService
         return list.OrderBy(x => x.DisplayName, StringComparer.CurrentCultureIgnoreCase).ThenBy(x => x.SamAccountName, StringComparer.OrdinalIgnoreCase).ToList();
     }
 
+    private static List<SearchResultItem> GetLockedOutAccountsCore(string filter, CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        var ldapPath = GetDomainLdapPath();
+        using var root = string.IsNullOrEmpty(ldapPath) ? new DirectoryEntry() : new DirectoryEntry(ldapPath);
+        using var searcher = new DirectorySearcher(root)
+        {
+            Filter = filter,
+            SearchScope = SearchScope.Subtree,
+            SizeLimit = 5000,
+            PageSize = 1000
+        };
+        searcher.PropertiesToLoad.Add("sAMAccountName");
+        searcher.PropertiesToLoad.Add("displayName");
+        searcher.PropertiesToLoad.Add("lockoutTime");
+        ct.ThrowIfCancellationRequested();
+
+        var list = new List<SearchResultItem>();
+        using var found = searcher.FindAll();
+        foreach (SearchResult? sr in found)
+        {
+            if (sr == null) continue;
+
+            var sam = GetProp(sr, "sAMAccountName");
+            if (string.IsNullOrEmpty(sam)) continue;
+
+            var lockout = GetPropLong(sr, "lockoutTime");
+            list.Add(new SearchResultItem
+            {
+                SamAccountName = sam,
+                DisplayName = GetProp(sr, "displayName"),
+                LockoutTime = FormatAdFileTime(lockout, zeroText: string.Empty)
+            });
+        }
+
+        return list
+            .OrderByDescending(x => x.LockoutTime, StringComparer.Ordinal)
+            .ThenBy(x => x.DisplayName, StringComparer.CurrentCultureIgnoreCase)
+            .ThenBy(x => x.SamAccountName, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
     private static long GetPropLong(SearchResult sr, string name)
     {
         var props = sr.Properties[name];
@@ -394,5 +436,19 @@ public static class ActiveDirectorySearchService
         if (v is long l) return l;
         if (v is int i) return i;
         return 0;
+    }
+
+    private static string FormatAdFileTime(long fileTime, string zeroText)
+    {
+        if (fileTime <= 0) return zeroText;
+        try
+        {
+            // FILETIME: 100ns intervals since 1601-01-01 (UTC).
+            return DateTime.FromFileTimeUtc(fileTime).ToLocalTime().ToString("dd/MM/yyyy HH:mm");
+        }
+        catch
+        {
+            return zeroText;
+        }
     }
 }
