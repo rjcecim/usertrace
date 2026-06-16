@@ -10,6 +10,7 @@ namespace UserTrace.Views;
 public sealed partial class ContasBloqueadasPage : Page
 {
     private CancellationTokenSource? _cts;
+    private List<SearchResultItem> _resultados = [];
 
     public ContasBloqueadasPage()
     {
@@ -38,6 +39,7 @@ public sealed partial class ContasBloqueadasPage : Page
         try
         {
             var list = await ActiveDirectorySearchService.GetLockedOutAccountsAsync(ct);
+            _resultados = list;
             ResultadoListView.ItemsSource = list;
             ContadorTextBlock.Text = ContagemPt.Texto(
                 list.Count,
@@ -65,5 +67,17 @@ public sealed partial class ContasBloqueadasPage : Page
         LoadingRing.Visibility = loading ? Visibility.Visible : Visibility.Collapsed;
         ResultadosPanel.Visibility = loading ? Visibility.Collapsed : Visibility.Visible;
         AtualizarButton.IsEnabled = !loading;
+    }
+
+    private void ExportItem_Click(object sender, RoutedEventArgs e) =>
+        ExportHelper.IniciarExportacaoMenu(this, sender, ExportarAsync);
+
+    private async Task ExportarAsync(string formato)
+    {
+        if (App.CurrentWindow is null)
+            throw new InvalidOperationException("Janela principal indisponível.");
+
+        var nomeBase = $"contas_bloqueadas_{DateTime.Now:yyyyMMdd_HHmm}";
+        await ExportHelper.ExportarListaDiretoAsync("Contas Bloqueadas", _resultados, nomeBase, formato, XamlRoot, App.CurrentWindow);
     }
 }

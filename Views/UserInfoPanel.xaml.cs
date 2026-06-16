@@ -9,10 +9,34 @@ namespace UserTrace.Views;
 
 public sealed partial class UserInfoPanel : UserControl
 {
+    private UserInfo? _currentUser;
+
     public UserInfoPanel()
     {
         InitializeComponent();
     }
+
+    private void ExportItem_Click(object sender, RoutedEventArgs e) =>
+        ExportHelper.IniciarExportacaoMenu(this, sender, ExportarAsync);
+
+    private async Task ExportarAsync(string formato)
+    {
+        if (_currentUser is null)
+        {
+            await ExportHelper.MostrarAvisoAsync(XamlRoot, "Não há usuário para exportar. Execute uma busca primeiro.");
+            return;
+        }
+
+        if (App.CurrentWindow is null)
+            throw new InvalidOperationException("Janela principal indisponível.");
+
+        var sam = _currentUser.SamAccountName;
+        var nomeBase = $"usuario_{Sanitize(sam)}_{DateTime.Now:yyyyMMdd_HHmm}";
+        await ExportHelper.ExportarUsuarioDiretoAsync(_currentUser, formato, nomeBase, XamlRoot, App.CurrentWindow);
+    }
+
+    private static string Sanitize(string s) =>
+        string.Concat(s.Select(c => System.IO.Path.GetInvalidFileNameChars().Contains(c) ? '_' : c));
 
     /// <summary>
     /// Só os valores dos cards Identidade, Status da conta, Senha e Logon podem ser selecionados para copiar.
@@ -80,6 +104,8 @@ public sealed partial class UserInfoPanel : UserControl
 
     public void ShowUser(UserInfo u)
     {
+        _currentUser = u;
+
         // Garante que o estado vazio não fique copiável (mesmo escondido).
         EmptyStateText.IsTextSelectionEnabled = false;
 

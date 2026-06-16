@@ -14,6 +14,8 @@ public sealed partial class SetorPage : Page
     private CancellationTokenSource? _ctsSetores;
     private CancellationTokenSource? _ctsUsuarios;
     private CancellationTokenSource? _ctsDetalhes;
+    private List<SearchResultItem> _usuariosDoSetor = [];
+    private string _setorAtual = string.Empty;
 
     public SetorPage()
     {
@@ -45,6 +47,8 @@ public sealed partial class SetorPage : Page
         SetSetoresLoading(true);
         SetoresListView.ItemsSource = null;
         UsuariosListView.ItemsSource = null;
+        _usuariosDoSetor = [];
+        _setorAtual = string.Empty;
         SetoresContadorText.Text = "Buscando setores…";
         UsuariosContadorText.Text = "Selecione um setor.";
         SetorSelecionadoText.Text = string.Empty;
@@ -93,6 +97,8 @@ public sealed partial class SetorPage : Page
         {
             SetoresListView.SelectedItem = null;
             UsuariosListView.ItemsSource = null;
+            _usuariosDoSetor = [];
+            _setorAtual = string.Empty;
             UsuariosContadorText.Text = "Selecione um setor.";
             SetorSelecionadoText.Text = string.Empty;
             SetorSelecionadoText.Visibility = Visibility.Collapsed;
@@ -126,6 +132,8 @@ public sealed partial class SetorPage : Page
             var usuarios = setor == SetorSemOffice
                 ? await ActiveDirectorySearchService.GetUsersWithoutOfficeAsync(ct)
                 : await ActiveDirectorySearchService.GetUsersByOfficeAsync(setor, ct);
+            _usuariosDoSetor = usuarios;
+            _setorAtual      = setor;
             UsuariosListView.ItemsSource = usuarios;
 
             UsuariosContadorText.Text = ContagemPt.Texto(
@@ -201,4 +209,28 @@ public sealed partial class SetorPage : Page
         DetalhesLoadingRing.Visibility = loading ? Visibility.Visible : Visibility.Collapsed;
         DetalhesPanel.Visibility = loading ? Visibility.Collapsed : Visibility.Visible;
     }
+
+    private void ExportUsuariosItem_Click(object sender, RoutedEventArgs e) =>
+        ExportHelper.IniciarExportacaoMenu(this, sender, ExportarUsuariosAsync);
+
+    private async Task ExportarUsuariosAsync(string formato)
+    {
+        if (App.CurrentWindow is null)
+            throw new InvalidOperationException("Janela principal indisponível.");
+
+        if (string.IsNullOrWhiteSpace(_setorAtual))
+        {
+            await ExportHelper.MostrarAvisoAsync(XamlRoot, "Selecione um setor para exportar os usuários.");
+            return;
+        }
+
+        var titulo = $"Usuários do setor: {_setorAtual}";
+        var nomeBase = $"setor_{Sanitize(_setorAtual)}_{DateTime.Now:yyyyMMdd_HHmm}";
+        await ExportHelper.ExportarListaUsuariosDiretoAsync(
+            titulo, _usuariosDoSetor, nomeBase, formato, XamlRoot, App.CurrentWindow,
+            avisoSemDados: "Não há usuários para exportar neste setor.");
+    }
+
+    private static string Sanitize(string s) =>
+        string.Concat(s.Select(c => System.IO.Path.GetInvalidFileNameChars().Contains(c) ? '_' : c));
 }

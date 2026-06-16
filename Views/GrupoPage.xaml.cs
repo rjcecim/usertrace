@@ -13,6 +13,9 @@ public sealed partial class GrupoPage : Page
     private CancellationTokenSource? _ctsGrupos;
     private CancellationTokenSource? _ctsMembros;
     private CancellationTokenSource? _ctsDetalhes;
+    private List<DomainGroupItem> _grupos = [];
+    private List<SearchResultItem> _membros = [];
+    private string _grupoSelecionado = string.Empty;
 
     public GrupoPage()
     {
@@ -41,6 +44,8 @@ public sealed partial class GrupoPage : Page
         FiltroTextBox.Text             = string.Empty;
         GruposListView.ItemsSource     = null;
         MembrosListView.ItemsSource    = null;
+        _membros = [];
+        _grupoSelecionado = string.Empty;
         GruposContadorText.Text        = "Carregando…";
         MembrosContadorText.Text       = "Selecione um grupo.";
         GrupoSelecionadoText.Text      = string.Empty;
@@ -79,6 +84,8 @@ public sealed partial class GrupoPage : Page
         SetGruposLoading(true);
         GruposListView.ItemsSource  = null;
         MembrosListView.ItemsSource = null;
+        _membros = [];
+        _grupoSelecionado = string.Empty;
         GruposContadorText.Text     = "Buscando grupos…";
         MembrosContadorText.Text    = "Selecione um grupo.";
         GrupoSelecionadoText.Visibility = Visibility.Collapsed;
@@ -88,6 +95,7 @@ public sealed partial class GrupoPage : Page
         {
             var grupos = await GroupService.GetAllGroupsAsync(filtro, ct);
 
+            _grupos = grupos;
             GruposListView.ItemsSource = grupos;
             GruposContadorText.Text = ContagemPt.Texto(
                 grupos.Count,
@@ -126,6 +134,8 @@ public sealed partial class GrupoPage : Page
         {
             var membros = await GroupService.GetGroupMembersAsync(grupo.Name, ct);
 
+            _membros = membros;
+            _grupoSelecionado = grupo.Name;
             MembrosListView.ItemsSource = membros;
             MembrosContadorText.Text = ContagemPt.Texto(
                 membros.Count,
@@ -201,4 +211,40 @@ public sealed partial class GrupoPage : Page
         DetalhesLoadingRing.Visibility = loading ? Visibility.Visible : Visibility.Collapsed;
         DetalhesPanel.Visibility       = loading ? Visibility.Collapsed : Visibility.Visible;
     }
+
+    private void ExportGruposItem_Click(object sender, RoutedEventArgs e) =>
+        ExportHelper.IniciarExportacaoMenu(this, sender, ExportarGruposAsync);
+
+    private void ExportMembrosItem_Click(object sender, RoutedEventArgs e) =>
+        ExportHelper.IniciarExportacaoMenu(this, sender, ExportarMembrosAsync);
+
+    private async Task ExportarGruposAsync(string formato)
+    {
+        if (App.CurrentWindow is null)
+            throw new InvalidOperationException("Janela principal indisponível.");
+
+        var filtro = FiltroTextBox.Text.Trim();
+        await ExportHelper.ExportarGruposDiretoAsync(filtro, _grupos, formato, XamlRoot, App.CurrentWindow);
+    }
+
+    private async Task ExportarMembrosAsync(string formato)
+    {
+        if (App.CurrentWindow is null)
+            throw new InvalidOperationException("Janela principal indisponível.");
+
+        if (string.IsNullOrWhiteSpace(_grupoSelecionado))
+        {
+            await ExportHelper.MostrarAvisoAsync(XamlRoot, "Selecione um grupo para exportar os membros.");
+            return;
+        }
+
+        var titulo = $"Membros do grupo: {_grupoSelecionado}";
+        var nomeBase = $"membros_{Sanitize(_grupoSelecionado)}_{DateTime.Now:yyyyMMdd_HHmm}";
+        await ExportHelper.ExportarListaUsuariosDiretoAsync(
+            titulo, _membros, nomeBase, formato, XamlRoot, App.CurrentWindow,
+            avisoSemDados: "Selecione um grupo para exportar os membros.");
+    }
+
+    private static string Sanitize(string s) =>
+        string.Concat(s.Select(c => Path.GetInvalidFileNameChars().Contains(c) ? '_' : c));
 }

@@ -12,6 +12,7 @@ public sealed partial class SenhasExpiradasPage : Page
 {
     private CancellationTokenSource? _cts;
     private bool _autoSearchRequested;
+    private List<SenhaExpiraDisplay> _resultados = [];
 
     public SenhasExpiradasPage()
     {
@@ -121,6 +122,7 @@ public sealed partial class SenhasExpiradasPage : Page
                 _ => []
             };
 
+            _resultados = display;
             ResultadoListView.ItemsSource = display;
             ContadorTextBlock.Text = ContagemPt.Texto(
                 display.Count,
@@ -148,5 +150,16 @@ public sealed partial class SenhasExpiradasPage : Page
         LoadingRing.Visibility = loading ? Visibility.Visible : Visibility.Collapsed;
         ResultadosPanel.Visibility = loading ? Visibility.Collapsed : Visibility.Visible;
         BuscarButton.IsEnabled = !loading;
+    }
+
+    private void ExportItem_Click(object sender, RoutedEventArgs e) =>
+        ExportHelper.IniciarExportacaoMenu(this, sender, ExportarAsync);
+
+    private async Task ExportarAsync(string formato)
+    {
+        if (App.CurrentWindow is null)
+            throw new InvalidOperationException("Janela principal indisponível.");
+
+        await ExportHelper.ExportarSenhasExpiradasDiretoAsync(_resultados, formato, XamlRoot, App.CurrentWindow);
     }
 }

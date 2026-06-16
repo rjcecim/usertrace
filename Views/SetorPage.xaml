@@ -173,26 +173,53 @@
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
 
-                        <StackPanel Grid.Row="0" Margin="14,10,14,8" Spacing="4">
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                <FontIcon
-                                    Glyph="&#xE77B;"
-                                    FontSize="12"
-                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                    VerticalAlignment="Center"/>
+                        <Grid Grid.Row="0" Margin="14,10,14,8" ColumnSpacing="8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0" Spacing="4">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <FontIcon
+                                        Glyph="&#xE77B;"
+                                        FontSize="12"
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                        VerticalAlignment="Center"/>
+                                    <TextBlock
+                                        x:Name="UsuariosContadorText"
+                                        Text="Selecione um setor."
+                                        Style="{StaticResource CaptionTextBlockStyle}"
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                </StackPanel>
                                 <TextBlock
-                                    x:Name="UsuariosContadorText"
-                                    Text="Selecione um setor."
-                                    Style="{StaticResource CaptionTextBlockStyle}"
-                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                    x:Name="SetorSelecionadoText"
+                                    Text=""
+                                    Style="{StaticResource BodyStrongTextBlockStyle}"
+                                    TextTrimming="CharacterEllipsis"
+                                    Visibility="Collapsed"/>
                             </StackPanel>
-                            <TextBlock
-                                x:Name="SetorSelecionadoText"
-                                Text=""
-                                Style="{StaticResource BodyStrongTextBlockStyle}"
-                                TextTrimming="CharacterEllipsis"
-                                Visibility="Collapsed"/>
-                        </StackPanel>
+
+                            <Button
+                                Grid.Column="1"
+                                VerticalAlignment="Top"
+                                ToolTipService.ToolTip="Exportar usuários do setor selecionado">
+                                <FontIcon Glyph="&#xEDE1;" FontSize="14"/>
+                                <Button.Flyout>
+                                    <MenuFlyout>
+                                        <MenuFlyoutItem Text="Exportar como TXT (.txt)" Tag="txt" Click="ExportUsuariosItem_Click">
+                                            <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8A5;"/></MenuFlyoutItem.Icon>
+                                        </MenuFlyoutItem>
+                                        <MenuFlyoutItem Text="Exportar como DOCX (.docx)" Tag="docx" Click="ExportUsuariosItem_Click">
+                                            <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8A5;"/></MenuFlyoutItem.Icon>
+                                        </MenuFlyoutItem>
+                                        <MenuFlyoutItem Text="Exportar como PDF (.pdf)" Tag="pdf" Click="ExportUsuariosItem_Click">
+                                            <MenuFlyoutItem.Icon><FontIcon Glyph="&#xEA90;"/></MenuFlyoutItem.Icon>
+                                        </MenuFlyoutItem>
+                                    </MenuFlyout>
+                                </Button.Flyout>
+                            </Button>
+                        </Grid>
 
                         <ListView
                             x:Name="UsuariosListView"

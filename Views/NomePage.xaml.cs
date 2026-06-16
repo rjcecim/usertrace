@@ -11,6 +11,7 @@ public sealed partial class NomePage : Page
 {
     private CancellationTokenSource? _ctsBusca;
     private CancellationTokenSource? _ctsDetalhes;
+    private List<SearchResultItem> _resultados = [];
 
     public NomePage()
     {
@@ -57,6 +58,7 @@ public sealed partial class NomePage : Page
         {
             var items = await ActiveDirectorySearchService.SearchByNameAsync(termo, ct);
 
+            _resultados = items;
             ResultadoListView.ItemsSource = items;
             ContadorTextBlock.Text = ContagemPt.Texto(
                 items.Count,
@@ -125,4 +127,20 @@ public sealed partial class NomePage : Page
         DetalhesLoadingRing.Visibility = loading ? Visibility.Visible : Visibility.Collapsed;
         DetalhesPanel.Visibility       = loading ? Visibility.Collapsed : Visibility.Visible;
     }
+
+    private void ExportItem_Click(object sender, RoutedEventArgs e) =>
+        ExportHelper.IniciarExportacaoMenu(this, sender, ExportarAsync);
+
+    private async Task ExportarAsync(string formato)
+    {
+        if (App.CurrentWindow is null)
+            throw new InvalidOperationException("Janela principal indisponível.");
+
+        var termo = NomeTextBox.Text.Trim();
+        var nomeBase = $"busca_nome_{Sanitize(termo)}_{DateTime.Now:yyyyMMdd_HHmm}";
+        await ExportHelper.ExportarListaDiretoAsync("Busca por Nome", _resultados, nomeBase, formato, XamlRoot, App.CurrentWindow);
+    }
+
+    private static string Sanitize(string s) =>
+        string.Concat(s.Select(c => System.IO.Path.GetInvalidFileNameChars().Contains(c) ? '_' : c));
 }

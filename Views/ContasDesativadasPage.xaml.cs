@@ -10,6 +10,7 @@ namespace UserTrace.Views;
 public sealed partial class ContasDesativadasPage : Page
 {
     private CancellationTokenSource? _cts;
+    private List<SearchResultItem> _resultados = [];
 
     public ContasDesativadasPage()
     {
@@ -38,6 +39,7 @@ public sealed partial class ContasDesativadasPage : Page
         try
         {
             var list = await ActiveDirectorySearchService.GetDisabledAccountsAsync(ct);
+            _resultados = list;
             ResultadoListView.ItemsSource = list;
             ContadorTextBlock.Text = ContagemPt.Texto(
                 list.Count,
@@ -65,5 +67,17 @@ public sealed partial class ContasDesativadasPage : Page
         LoadingRing.Visibility = loading ? Visibility.Visible : Visibility.Collapsed;
         ResultadosPanel.Visibility = loading ? Visibility.Collapsed : Visibility.Visible;
         AtualizarButton.IsEnabled = !loading;
+    }
+
+    private void ExportItem_Click(object sender, RoutedEventArgs e) =>
+        ExportHelper.IniciarExportacaoMenu(this, sender, ExportarAsync);
+
+    private async Task ExportarAsync(string formato)
+    {
+        if (App.CurrentWindow is null)
+            throw new InvalidOperationException("Janela principal indisponível.");
+
+        var nomeBase = $"contas_desativadas_{DateTime.Now:yyyyMMdd_HHmm}";
+        await ExportHelper.ExportarListaDiretoAsync("Contas Desativadas", _resultados, nomeBase, formato, XamlRoot, App.CurrentWindow);
     }
 }
