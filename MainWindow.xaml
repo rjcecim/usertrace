@@ -10,7 +10,7 @@
         MICA BEST PRACTICE #1 — Background da raiz DEVE ser Transparent.
         Qualquer cor sólida aqui bloqueia o Mica de aparecer.
     -->
-    <Grid Background="Transparent">
+    <Grid Background="Transparent" PreviewKeyDown="Root_PreviewKeyDown">
         <NavigationView
             x:Name="NavView"
             IsBackButtonVisible="Collapsed"

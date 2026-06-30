@@ -5,6 +5,7 @@ using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media.Animation;
 using UserTrace.Helpers;
 using UserTrace.Views;
@@ -158,5 +159,23 @@ public sealed partial class MainWindow : WindowEx
         var tag = item.Tag?.ToString();
         if (string.IsNullOrWhiteSpace(tag)) return;
         NavigateToMenu(tag, null);
+    }
+
+    private void Root_PreviewKeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        if (e.Key != Windows.System.VirtualKey.Escape) return;
+        if (ContentFrame.Content is DashboardPage) return;
+        if (HasOpenOverlay()) return;
+
+        NavigateToMenu("Dashboard");
+        e.Handled = true;
+    }
+
+    private bool HasOpenOverlay()
+    {
+        var xamlRoot = Content?.XamlRoot;
+        if (xamlRoot is null) return false;
+
+        return VisualTreeHelper.GetOpenPopupsForXamlRoot(xamlRoot).Count > 0;
     }
 }
