@@ -44,7 +44,9 @@ usertrace/
 ├── MainWindow.xaml
 ├── MainWindow.xaml.cs
 ├── Assets/
-│   └── app.ico
+│   ├── app_icon.png
+│   ├── app_mark.png
+│   └── icon.ico
 ├── Converters/
 │   └── HighlightedGroupToBrushConverter.cs
 ├── Helpers/
@@ -92,7 +94,7 @@ usertrace/
 | `PublishSingleFile` | `true` | Saída em arquivo único |
 | `EnableCompressionInSingleFile` | `true` | Compressão do EXE final |
 | `AllowUnsafeBlocks` | `true` | Necessário para P/Invoke com structs |
-| `ApplicationIcon` | `Assets\app.ico` | Ícone embutido no EXE |
+| `ApplicationIcon` | `Assets\icon.ico` | Ícone embutido no EXE |
 
 ### Dependências NuGet
 
@@ -343,7 +345,7 @@ Janela principal herdando de `WindowEx` (WinUIEx).
 - `ExtendsContentIntoTitleBar = true` — conteúdo sobe para trás da barra de título
 - `MicaBackdrop { Kind = MicaKind.Base }` — efeito Mica ativado
 - Botões da TitleBar com fundo transparente (`ButtonBackgroundColor = Colors.Transparent`)
-- Ícone: `AppWindow.SetIcon(@"Assets\app.ico")`
+- Ícone: `AppWindow.SetIcon(@"Assets\icon.ico")` (marca em `Assets\app_icon.png` / `Assets\app_mark.png`)
 - `ContentFrame.Navigated` é assinado **antes** do primeiro `Navigate(typeof(LoginPage))` no construtor; caso contrário a carga inicial não dispara o handler e descrições com `PageDescriptionStyle` podem ficar copiáveis até a próxima navegação.
 - `ContentFrame.Navigated`: quando a página de destino é `LoginPage` com parâmetro (login), `NavView.SelectedItem` é sincronizado para "Busca por Login"; em `NavView_SelectionChanged`, se a página atual já for a do item selecionado, não navega de novo (evita sobrescrever o parâmetro). No mesmo evento, a **seleção de texto** fica desligada no conteúdo das páginas (`ApplyCopyPolicyToPage(page)` → `TextSelectionHelper`); o menu lateral (NavView) **não** recebe alteração, para que itens do menu e ícones Unicode não sejam copiáveis.
 
@@ -737,7 +739,7 @@ foreach ($rid in $rids) {
 - Windows App SDK 1.8
 - Visual C++ Redistributable
 - WinUI 3 e WinUIEx assemblies
-- Ícone (`app.ico`)
+- Ícone (`icon.ico`, `app_icon.png`, `app_mark.png`)
 
 ---
 

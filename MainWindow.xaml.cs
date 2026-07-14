@@ -25,7 +25,7 @@ public sealed partial class MainWindow : WindowEx
         Title = "UserTrace";
         this.SetWindowSize(1160, 740);
         this.CenterOnScreen();
-        AppWindow.SetIcon(@"Assets\app.ico");
+        AppWindow.SetIcon(@"Assets\icon.ico");
 
         // MICA BEST PRACTICE #4 — ExtendsContentIntoTitleBar = true
         // faz o conteúdo subir para trás da TitleBar, permitindo que o Mica

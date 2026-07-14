@@ -12,14 +12,21 @@
                 O cabeçalho principal flutua diretamente sobre o Mica,
                 criando contraste de profundidade com os cards abaixo.
             -->
-            <StackPanel Spacing="4" Margin="0,0,0,8">
-                <TextBlock
-                    Text="UserTrace"
-                    Style="{StaticResource TitleLargeTextBlockStyle}"/>
-                <TextBlock
-                    Text="Consulta de usuários e grupos no Active Directory."
-                    Style="{StaticResource BodyTextBlockStyle}"
-                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+            <StackPanel Orientation="Horizontal" Spacing="16" Margin="0,0,0,8">
+                <Image
+                    Source="ms-appx:///Assets/app_icon.png"
+                    Width="72" Height="72"
+                    Stretch="Uniform"
+                    VerticalAlignment="Center"/>
+                <StackPanel Spacing="4" VerticalAlignment="Center">
+                    <TextBlock
+                        Text="UserTrace"
+                        Style="{StaticResource TitleLargeTextBlockStyle}"/>
+                    <TextBlock
+                        Text="Consulta de usuários e grupos no Active Directory."
+                        Style="{StaticResource BodyTextBlockStyle}"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                </StackPanel>
             </StackPanel>
 
             <!--

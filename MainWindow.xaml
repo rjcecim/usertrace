@@ -30,17 +30,11 @@
                 <StackPanel Margin="16,48,16,12" Spacing="6">
                     <!-- Logo + nome do app -->
                     <StackPanel Orientation="Horizontal" Spacing="10">
-                        <Border
+                        <Image
+                            Source="ms-appx:///Assets/app_icon.png"
                             Width="32" Height="32"
-                            CornerRadius="8"
-                            Background="{ThemeResource AccentFillColorDefaultBrush}">
-                            <FontIcon
-                                Glyph="&#xE774;"
-                                FontSize="16"
-                                Foreground="White"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"/>
-                        </Border>
+                            Stretch="Uniform"
+                            VerticalAlignment="Center"/>
                         <StackPanel VerticalAlignment="Center" Spacing="1">
                             <TextBlock
                                 Text="UserTrace"
