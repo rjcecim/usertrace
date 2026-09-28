@@ -95,10 +95,12 @@ public sealed partial class GrupoPage : Page
         {
             var grupos = await GroupService.GetAllGroupsAsync(filtro, ct);
 
-            _grupos = grupos;
-            GruposListView.ItemsSource = grupos;
-            GruposContadorText.Text = ContagemPt.Texto(
-                grupos.Count,
+            _grupos = grupos.Items.ToList();
+            GruposListView.ItemsSource = _grupos;
+            GruposContadorText.Text = ContagemPt.TextoLista(
+                _grupos.Count,
+                grupos.Truncated,
+                grupos.Limit,
                 "Nenhum grupo encontrado.",
                 "1 grupo encontrado.",
                 "{0} grupos encontrados.");
@@ -134,11 +136,13 @@ public sealed partial class GrupoPage : Page
         {
             var membros = await GroupService.GetGroupMembersAsync(grupo.Name, ct);
 
-            _membros = membros;
+            _membros = membros.Items.ToList();
             _grupoSelecionado = grupo.Name;
-            MembrosListView.ItemsSource = membros;
-            MembrosContadorText.Text = ContagemPt.Texto(
-                membros.Count,
+            MembrosListView.ItemsSource = _membros;
+            MembrosContadorText.Text = ContagemPt.TextoLista(
+                _membros.Count,
+                membros.Truncated,
+                membros.Limit,
                 "Nenhum membro encontrado.",
                 "1 membro encontrado.",
                 "{0} membros encontrados.");

@@ -349,7 +349,7 @@
                             </StackPanel>
 
                             <StackPanel Grid.Row="1" Grid.Column="0" Spacing="4">
-                                <TextBlock Text="Faltam (dias) para expirar" Style="{StaticResource FieldLabelStyle}"/>
+                                <TextBlock x:Name="DiasParaExpirarLabel" Text="Faltam (dias) para expirar" Style="{StaticResource FieldLabelStyle}"/>
                                 <TextBlock x:Name="DiasParaExpirarText" Style="{StaticResource FieldValueStyle}"/>
                             </StackPanel>
 
@@ -418,7 +418,7 @@
                             </Grid.RowDefinitions>
 
                             <StackPanel Grid.Row="0" Grid.Column="0" Spacing="4">
-                                <TextBlock Text="Último logon" Style="{StaticResource FieldLabelStyle}"/>
+                                <TextBlock Text="Último logon no domínio" Style="{StaticResource FieldLabelStyle}"/>
                                 <StackPanel Orientation="Horizontal" Spacing="6">
                                     <FontIcon Glyph="&#xE787;" FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
                                     <TextBlock x:Name="UltimoLogonText" Style="{StaticResource FieldValueStyle}"/>

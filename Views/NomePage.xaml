@@ -27,7 +27,7 @@
                     VerticalAlignment="Center"/>
             </StackPanel>
             <TextBlock
-                Text="Pesquisa usuários no Active Directory por nome parcial."
+                Text="Pesquisa contas ativas por nome ou login."
                 Style="{StaticResource PageDescriptionStyle}"/>
         </StackPanel>
 

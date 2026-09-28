@@ -1,238 +1,136 @@
 using System.DirectoryServices;
-using System.DirectoryServices.ActiveDirectory;
+using UserTrace.Core;
 using UserTrace.Models;
 
 namespace UserTrace.Services;
 
 public static class GroupService
 {
-    // Constantes de groupType (bitmask AD)
-    private const int GROUP_GLOBAL    = 0x00000002;
-    private const int GROUP_LOCAL     = 0x00000004;
-    private const int GROUP_UNIVERSAL = 0x00000008;
+    private const int GroupGlobal = 0x00000002;
+    private const int GroupLocal = 0x00000004;
+    private const int GroupUniversal = 0x00000008;
 
-    /// <summary>
-    /// Lista todos os grupos do domínio, equivalente a "net group /domain".
-    /// Retorna lista ordenada por nome, limitada a 2000 grupos.
-    /// </summary>
-    public static Task<List<GroupItem>> GetAllGroupsAsync(
+    public static Task<QueryResult<GroupItem>> GetAllGroupsAsync(
         string? filterName = null,
-        CancellationToken cancellationToken = default)
-    {
-        return Task.Run(() => GetAllGroupsCore(filterName, cancellationToken), cancellationToken);
-    }
+        CancellationToken cancellationToken = default) =>
+        Task.Run(() => GetAllGroupsCore(filterName, cancellationToken), cancellationToken);
 
-    /// <summary>
-    /// Retorna todos os membros (sAMAccountName + displayName) de um grupo.
-    /// Resolve membros diretos e, quando possível, membros de subgrupos (1 nível).
-    /// </summary>
-    public static Task<List<SearchResultItem>> GetGroupMembersAsync(
+    public static Task<QueryResult<SearchResultItem>> GetGroupMembersAsync(
         string groupName,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) =>
+        Task.Run(() => GetGroupMembersCore(groupName, cancellationToken), cancellationToken);
+
+    private static QueryResult<GroupItem> GetAllGroupsCore(string? filter, CancellationToken ct)
     {
-        return Task.Run(() => GetGroupMembersCore(groupName, cancellationToken), cancellationToken);
-    }
-
-    // ── implementações privadas ──────────────────────────────────────────────
-
-    private static List<GroupItem> GetAllGroupsCore(string? filter, CancellationToken ct)
-    {
-        ct.ThrowIfCancellationRequested();
-
-        var ldapPath = GetDomainLdapPath();
-        var results  = new List<GroupItem>();
-
-        // Filtro: apenas grupos (objectClass=group), opcionalmente por nome
-        string nameFilter = string.IsNullOrWhiteSpace(filter)
+        var nameFilter = string.IsNullOrWhiteSpace(filter)
             ? string.Empty
-            : $"(cn=*{EscapeLdap(filter.Trim())}*)";
+            : $"(cn=*{LdapFilter.Escape(filter.Trim())}*)";
 
-        string ldapFilter = $"(&(objectClass=group)(objectCategory=group){nameFilter})";
+        var ldapFilter = $"(&(objectClass=group)(objectCategory=group){nameFilter})";
+        var result = LdapDirectory.Query(
+            ldapFilter,
+            ["cn", "description", "groupType"],
+            SearchLimits.Safety,
+            MapGroup,
+            ct);
 
-        using var root    = string.IsNullOrEmpty(ldapPath)
-                                ? new DirectoryEntry()
-                                : new DirectoryEntry(ldapPath);
-
-        using var searcher = new DirectorySearcher(root)
-        {
-            Filter      = ldapFilter,
-            SearchScope = SearchScope.Subtree,
-            SizeLimit   = 2000,
-            PageSize    = 500
-        };
-
-        searcher.PropertiesToLoad.Add("cn");
-        searcher.PropertiesToLoad.Add("description");
-        searcher.PropertiesToLoad.Add("groupType");
-
-        ct.ThrowIfCancellationRequested();
-
-        using var found = searcher.FindAll();
-
-        foreach (SearchResult? sr in found)
-        {
-            if (sr == null) continue;
-
-            var name = GetProp(sr, "cn");
-            if (string.IsNullOrEmpty(name)) continue;
-
-            var desc      = GetProp(sr, "description");
-            var groupType = ResolveGroupType(sr);
-
-            results.Add(new GroupItem
-            {
-                Name        = name,
-                Description = desc,
-                GroupType   = groupType
-            });
-        }
-
-        results.Sort((a, b) =>
-            string.Compare(a.Name, b.Name, StringComparison.CurrentCultureIgnoreCase));
-
-        return results;
+        var items = result.Items
+            .OrderBy(x => x.Name, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
+        return result.WithItems(items);
     }
 
-    private static List<SearchResultItem> GetGroupMembersCore(string groupName, CancellationToken ct)
+    private static QueryResult<SearchResultItem> GetGroupMembersCore(string groupName, CancellationToken ct)
     {
-        ct.ThrowIfCancellationRequested();
+        if (string.IsNullOrWhiteSpace(groupName))
+            return QueryResult<SearchResultItem>.None(SearchLimits.Safety);
 
-        var ldapPath = GetDomainLdapPath();
-        var members  = new Dictionary<string, SearchResultItem>(StringComparer.OrdinalIgnoreCase);
-
-        // Passo 1: encontrar o DN do grupo pelo nome
-        string groupDn = FindGroupDn(groupName, ldapPath);
-
+        var groupDn = FindGroupDn(groupName.Trim());
         if (string.IsNullOrEmpty(groupDn))
-            return [];
+            return QueryResult<SearchResultItem>.None(SearchLimits.Safety);
 
         ct.ThrowIfCancellationRequested();
 
-        // Passo 2: buscar todos os usuários cujo memberOf contém este grupo
-        // Usa filtro LDAP_MATCHING_RULE_IN_CHAIN (1.2.840.113556.1.4.1941)
-        // para resolver membros de subgrupos recursivamente no AD
-        string filter =
+        var filter =
             $"(&(objectClass=user)(objectCategory=person)" +
-            $"(memberOf:1.2.840.113556.1.4.1941:={EscapeLdap(groupDn)}))";
+            $"(memberOf:1.2.840.113556.1.4.1941:={LdapFilter.Escape(groupDn)}))";
 
-        using var root = string.IsNullOrEmpty(ldapPath)
-                             ? new DirectoryEntry()
-                             : new DirectoryEntry(ldapPath);
-
-        using var searcher = new DirectorySearcher(root)
-        {
-            Filter      = filter,
-            SearchScope = SearchScope.Subtree,
-            SizeLimit   = 1000,
-            PageSize    = 500
-        };
-
-        searcher.PropertiesToLoad.Add("sAMAccountName");
-        searcher.PropertiesToLoad.Add("displayName");
-
-        ct.ThrowIfCancellationRequested();
-
-        using var found = searcher.FindAll();
-
-        foreach (SearchResult? sr in found)
-        {
-            if (sr == null) continue;
-
-            var sam     = GetProp(sr, "sAMAccountName");
-            var display = GetProp(sr, "displayName");
-
-            if (string.IsNullOrEmpty(sam)) continue;
-
-            if (!members.ContainsKey(sam))
+        var result = LdapDirectory.Query(
+            filter,
+            ["sAMAccountName", "displayName"],
+            SearchLimits.Safety,
+            sr =>
             {
-                members[sam] = new SearchResultItem
+                var sam = LdapDirectory.ReadString(sr, "sAMAccountName");
+                if (string.IsNullOrEmpty(sam))
+                    return null;
+
+                return new SearchResultItem
                 {
                     SamAccountName = sam,
-                    DisplayName    = display
+                    DisplayName = LdapDirectory.ReadString(sr, "displayName")
                 };
-            }
-        }
+            },
+            ct);
 
-        return members.Values
+        var items = result.Items
+            .GroupBy(x => x.SamAccountName, StringComparer.OrdinalIgnoreCase)
+            .Select(g => g.First())
             .OrderBy(x => x.DisplayName, StringComparer.CurrentCultureIgnoreCase)
+            .ThenBy(x => x.SamAccountName, StringComparer.OrdinalIgnoreCase)
             .ToList();
+
+        return result.WithItems(items);
     }
 
-    private static string FindGroupDn(string groupName, string ldapPath)
+    private static string FindGroupDn(string groupName)
     {
+        using var root = LdapDirectory.OpenRoot();
+        using var searcher = new DirectorySearcher(root)
+        {
+            Filter = $"(&(objectClass=group)(cn={LdapFilter.Escape(groupName)}))",
+            SearchScope = SearchScope.Subtree,
+            SizeLimit = 1
+        };
+        searcher.PropertiesToLoad.Add("distinguishedName");
+
         try
         {
-            using var root = string.IsNullOrEmpty(ldapPath)
-                                 ? new DirectoryEntry()
-                                 : new DirectoryEntry(ldapPath);
-
-            using var searcher = new DirectorySearcher(root)
-            {
-                Filter      = $"(&(objectClass=group)(cn={EscapeLdap(groupName)}))",
-                SearchScope = SearchScope.Subtree,
-                SizeLimit   = 1
-            };
-            searcher.PropertiesToLoad.Add("distinguishedName");
-
             var result = searcher.FindOne();
-            if (result == null) return string.Empty;
-
-            return GetProp(result, "distinguishedName");
+            if (result is null)
+                return string.Empty;
+            return LdapDirectory.ReadString(result, "distinguishedName");
         }
-        catch
+        catch (Exception ex)
         {
-            return string.Empty;
+            throw new InvalidOperationException(
+                $"Falha ao consultar o Active Directory: {ex.Message}", ex);
         }
     }
 
-    private static string ResolveGroupType(SearchResult sr)
+    private static GroupItem? MapGroup(SearchResult sr)
     {
-        var props = sr.Properties["groupType"];
-        if (props == null || props.Count == 0) return string.Empty;
+        var name = LdapDirectory.ReadString(sr, "cn");
+        if (string.IsNullOrEmpty(name))
+            return null;
 
-        if (props[0] is not int raw) return string.Empty;
-
-        // O bit de sinal (0x80000000) indica grupo de segurança vs. distribuição
-        int scope = raw & 0x0000000F;
-
-        return scope switch
+        return new GroupItem
         {
-            GROUP_GLOBAL    => "Global",
-            GROUP_LOCAL     => "Local",
-            GROUP_UNIVERSAL => "Universal",
-            _               => string.Empty
+            Name = name,
+            Description = LdapDirectory.ReadString(sr, "description"),
+            GroupType = ResolveGroupType(LdapDirectory.ReadInt32(sr, "groupType"))
         };
     }
 
-    private static string GetDomainLdapPath()
+    private static string ResolveGroupType(int raw)
     {
-        try
+        var scope = raw & 0x0000000F;
+        return scope switch
         {
-            var domainName = Domain.GetComputerDomain().Name;
-            return $"LDAP://{domainName}";
-        }
-        catch { }
-
-        var envDomain = Environment.GetEnvironmentVariable("USERDNSDOMAIN");
-        if (!string.IsNullOrEmpty(envDomain))
-            return $"LDAP://{envDomain}";
-
-        var userDomain = Environment.UserDomainName;
-        if (!string.IsNullOrEmpty(userDomain))
-            return $"LDAP://{userDomain}";
-
-        return string.Empty;
+            GroupGlobal => "Global",
+            GroupLocal => "Local",
+            GroupUniversal => "Universal",
+            _ => string.Empty
+        };
     }
-
-    private static string GetProp(SearchResult sr, string name)
-    {
-        var props = sr.Properties[name];
-        if (props == null || props.Count == 0) return string.Empty;
-        return props[0]?.ToString() ?? string.Empty;
-    }
-
-    private static string EscapeLdap(string value) =>
-        value.Replace("\\", "\\5c").Replace("*", "\\2a")
-             .Replace("(", "\\28").Replace(")", "\\29")
-             .Replace("\0", "\\00").Replace("/", "\\2f");
 }

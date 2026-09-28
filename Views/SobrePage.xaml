@@ -110,7 +110,7 @@
                                     TextWrapping="Wrap"
                                     Style="{StaticResource CaptionTextBlockStyle}"
                                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                    Text="Informe o sAMAccountName e clique em Buscar. Os detalhes equivalem ao net user /domain."/>
+                                    Text="Informe o login (sAMAccountName) e clique em Buscar."/>
                             </StackPanel>
                         </Border>
 
@@ -136,7 +136,7 @@
                                     TextWrapping="Wrap"
                                     Style="{StaticResource CaptionTextBlockStyle}"
                                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                    Text="Digite parte do nome para listar correspondências. Selecione um para ver os detalhes."/>
+                                    Text="Digite parte do nome ou do login para listar contas ativas. Selecione uma para ver os detalhes."/>
                             </StackPanel>
                         </Border>
 
@@ -295,7 +295,7 @@
                             Style="{StaticResource BodyStrongTextBlockStyle}"
                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                         <TextBlock Grid.Row="2" Grid.Column="1"
-                            Text="Administrador local (UAC) + leitura de objetos no AD"
+                            Text="Leitura de objetos no Active Directory"
                             Style="{StaticResource BodyTextBlockStyle}"/>
 
                         <TextBlock Grid.Row="3" Grid.Column="0"
@@ -303,7 +303,7 @@
                             Style="{StaticResource BodyStrongTextBlockStyle}"
                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                         <TextBlock Grid.Row="3" Grid.Column="1"
-                            Text="Acesso ao DC nas portas 389 (LDAP) e RPC"
+                            Text="Acesso ao controlador de domínio na porta 389 (LDAP)"
                             Style="{StaticResource BodyTextBlockStyle}"/>
 
                         <TextBlock Grid.Row="4" Grid.Column="0"

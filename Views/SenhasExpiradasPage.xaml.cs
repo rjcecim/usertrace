@@ -99,33 +99,30 @@ public sealed partial class SenhasExpiradasPage : Page
 
         try
         {
-            List<SenhaExpiraDisplay> display = tag switch
+            var tagBusca = tag;
+            var (display, truncated, limit) = tagBusca switch
             {
-                "Intervalo" => (await ActiveDirectorySearchService.GetPasswordExpiringInRangeAsync(
+                "Intervalo" => await ListarExpiracaoAsync(
+                    ActiveDirectorySearchService.GetPasswordExpiringInRangeAsync(
                         DataInicioPicker.Date.DateTime,
                         DataFimPicker.Date.DateTime,
-                        ct))
-                    .Select(SenhaExpiraDisplay.FromPasswordExpiry)
-                    .ToList(),
-                "DataEspecifica" => (await ActiveDirectorySearchService.GetPasswordExpiringOnDateAsync(
+                        ct)),
+                "DataEspecifica" => await ListarExpiracaoAsync(
+                    ActiveDirectorySearchService.GetPasswordExpiringOnDateAsync(
                         DataEspecificaPicker.Date.DateTime,
-                        ct))
-                    .Select(SenhaExpiraDisplay.FromPasswordExpiry)
-                    .ToList(),
-                "Hoje" => (await ActiveDirectorySearchService.GetPasswordExpiringTodayAsync(ct))
-                    .Select(SenhaExpiraDisplay.FromPasswordExpiry)
-                    .ToList(),
-                "ProximoLogon" => (await ActiveDirectorySearchService.GetMustChangePasswordAtNextLogonAsync(ct))
-                    .Select(SenhaExpiraDisplay.FromSearchResultNextLogon)
-                    .OrderBy(x => x.DisplayName, StringComparer.OrdinalIgnoreCase)
-                    .ToList(),
-                _ => []
+                        ct)),
+                "Hoje" => await ListarExpiracaoAsync(
+                    ActiveDirectorySearchService.GetPasswordExpiringTodayAsync(ct)),
+                "ProximoLogon" => await ListarProximoLogonAsync(ct),
+                _ => (new List<SenhaExpiraDisplay>(), false, 0)
             };
 
             _resultados = display;
             ResultadoListView.ItemsSource = display;
-            ContadorTextBlock.Text = ContagemPt.Texto(
+            ContadorTextBlock.Text = ContagemPt.TextoLista(
                 display.Count,
+                truncated,
+                limit,
                 "Nenhum resultado.",
                 "1 usuário encontrado.",
                 "{0} usuários encontrados.");
@@ -142,6 +139,27 @@ public sealed partial class SenhasExpiradasPage : Page
         {
             SetLoading(false);
         }
+    }
+
+    private static async Task<(List<SenhaExpiraDisplay> Items, bool Truncated, int Limit)> ListarExpiracaoAsync(
+        Task<QueryResult<SenhaExpiraItem>> busca)
+    {
+        var resultado = await busca;
+        return (
+            resultado.Items.Select(SenhaExpiraDisplay.FromPasswordExpiry).ToList(),
+            resultado.Truncated,
+            resultado.Limit);
+    }
+
+    private static async Task<(List<SenhaExpiraDisplay> Items, bool Truncated, int Limit)> ListarProximoLogonAsync(
+        CancellationToken ct)
+    {
+        var resultado = await ActiveDirectorySearchService.GetMustChangePasswordAtNextLogonAsync(ct);
+        var items = resultado.Items
+            .Select(SenhaExpiraDisplay.FromSearchResultNextLogon)
+            .OrderBy(x => x.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        return (items, resultado.Truncated, resultado.Limit);
     }
 
     private void SetLoading(bool loading)

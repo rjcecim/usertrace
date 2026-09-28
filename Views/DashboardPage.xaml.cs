@@ -97,36 +97,35 @@ public sealed partial class DashboardPage : Page
             SetLoading(true, "Carregando métricas e gráficos…");
 
             var today = DateTime.Today;
+            await LdapDirectory.RefreshPasswordPolicyAsync(ct);
+            var policy = LdapDirectory.GetPasswordPolicy();
 
-            // Faz as consultas em paralelo para reduzir o tempo total de carregamento.
             var lockedTask = ActiveDirectorySearchService.GetLockedOutAccountsAsync(ct);
-            var expiringTodayTask = ActiveDirectorySearchService.GetPasswordExpiringTodayAsync(ct);
-            var expiringInWeekTask = ActiveDirectorySearchService.GetPasswordExpiringInRangeAsync(
+            var expiringWeekTask = ActiveDirectorySearchService.GetPasswordExpiringInRangeAsync(
                 today,
                 today.AddDays(6),
                 ct);
             var mustChangeNextLogonTask =
                 ActiveDirectorySearchService.GetMustChangePasswordAtNextLogonAsync(ct);
 
-            await Task.WhenAll(lockedTask, expiringTodayTask, expiringInWeekTask, mustChangeNextLogonTask);
+            await Task.WhenAll(lockedTask, expiringWeekTask, mustChangeNextLogonTask);
 
-            var lockedCount = lockedTask.Result.Count;
-            var expiringToday = expiringTodayTask.Result;
-            var expiringInWeek = expiringInWeekTask.Result;
-            var mustChangeNextLogonCount = mustChangeNextLogonTask.Result.Count;
+            var locked = await lockedTask;
+            var expiringInWeek = await expiringWeekTask;
+            var mustChange = await mustChangeNextLogonTask;
+            var expiringTodayCount = expiringInWeek.Items.Count(x => x.Expira.Date == today);
 
-            _lockedCount = lockedCount;
-            _expiringTodayCount = expiringToday.Count;
-            _nextDaysCount = expiringInWeek.Count - expiringToday.Count;
-            _mustChangeNextLogonCount = mustChangeNextLogonCount;
+            _lockedCount = locked.Items.Count;
+            _expiringTodayCount = expiringTodayCount;
+            _nextDaysCount = expiringInWeek.Items.Count - expiringTodayCount;
+            _mustChangeNextLogonCount = mustChange.Items.Count;
 
-            KpiLockedCountTextBlock.Text = lockedCount.ToString();
-            KpiExpireTodayCountTextBlock.Text = expiringToday.Count.ToString();
-            KpiExpireInWeekCountTextBlock.Text = expiringInWeek.Count.ToString();
-            KpiMustChangeNextLogonCountTextBlock.Text = mustChangeNextLogonCount.ToString();
+            KpiLockedCountTextBlock.Text = _lockedCount.ToString();
+            KpiExpireTodayCountTextBlock.Text = expiringTodayCount.ToString();
+            KpiExpireInWeekCountTextBlock.Text = expiringInWeek.Items.Count.ToString();
+            KpiMustChangeNextLogonCountTextBlock.Text = _mustChangeNextLogonCount.ToString();
 
-            // Gráfico 1: distribuição diária (hoje até +6).
-            var byDay = expiringInWeek
+            var byDay = expiringInWeek.Items
                 .GroupBy(x => x.Expira.Date)
                 .ToDictionary(g => g.Key, g => g.Count());
 
@@ -153,7 +152,18 @@ public sealed partial class DashboardPage : Page
 
             RenderCharts();
 
-            SetLoading(false, $"Atualizado: {DateTime.Now:dd/MM/yyyy HH:mm}");
+            var status = $"Atualizado: {DateTime.Now:dd/MM/yyyy HH:mm}. Política de senha: {policy.Describe()}.";
+            var avisos = new List<string>();
+            if (locked.Truncated)
+                avisos.Add($"bloqueadas no limite de {locked.Limit}");
+            if (expiringInWeek.Truncated)
+                avisos.Add($"senhas no limite de {expiringInWeek.Limit}");
+            if (mustChange.Truncated)
+                avisos.Add($"troca no logon no limite de {mustChange.Limit}");
+            if (avisos.Count > 0)
+                status += " Busca parcial: " + string.Join("; ", avisos) + ".";
+
+            SetLoading(false, status);
         }
         catch (OperationCanceledException)
         {

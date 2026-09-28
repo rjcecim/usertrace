@@ -20,10 +20,7 @@
 
 ## 1. Visão Geral
 
-O **UserTrace** é uma aplicação desktop WinUI 3 para consulta de usuários e grupos no Active Directory. Utiliza duas APIs distintas para obter informações:
-
-- **P/Invoke (`netapi32.dll`)** — detalhes completos de um usuário específico (nível 3 da API Win32)
-- **LDAP (`System.DirectoryServices`)** — busca por nome parcial e listagem/membros de grupos
+O **UserTrace** é uma aplicação desktop WinUI 3 para consulta de usuários e grupos no Active Directory. As consultas usam LDAP (`System.DirectoryServices`) com a credencial do Windows logado. A idade da senha vem de `maxPwdAge` no domínio. Listas grandes avisam quando a busca para no limite.
 
 A aplicação é distribuída como um único EXE self-contained (~85 MB), sem necessidade de instalação ou dependências externas.
 
@@ -109,7 +106,7 @@ usertrace/
 
 ### `app.manifest`
 
-- `requireAdministrator` — eleva o processo para administrador local (necessário para `NetUserGetInfo` e acesso ao AD)
+- `asInvoker` — o processo não pede elevação; a leitura do AD usa a credencial do usuário logado
 - `PerMonitorV2` DPI awareness — renderização nítida em monitores com DPI diferente
 - `longPathAware` — suporte a caminhos longos no Windows
 
@@ -144,22 +141,22 @@ Modelo estruturado com todos os atributos de um usuário do AD.
 | `AccountActive` | `bool` | flag `UF_ACCOUNTDISABLE` invertida |
 | `AccountExpires` | `string` | `usri3_acct_expires` formatado |
 | `PasswordLastSet` | `string` | LDAP `pwdLastSet` (fallback: `usri3_password_age` calculado) |
-| `PasswordExpiresOn` | `string` | calculado a partir de `pwdLastSet` + política (180 dias) |
-| `PasswordDaysToExpire` | `string` | calculado a partir de `PasswordExpiresOn` (dias restantes; mínimo 0) |
+| `PasswordExpiresOn` | `string` | calculado a partir de `pwdLastSet` + `maxPwdAge` do domínio |
+| `PasswordDaysToExpire` | `string` | dias até expirar; negativo quando a senha já venceu |
 | `LockoutTime` | `string` | LDAP `lockoutTime` formatado (FILETIME) |
 | `PasswordNeverExpires` | `bool` | flag `UF_DONT_EXPIRE_PASSWD` |
 | `PasswordExpired` | `bool` | flag `UF_PASSWORD_EXPIRED` |
 | `PasswordRequired` | `bool` | flag `UF_PASSWD_NOTREQD` invertida |
 | `PasswordChangeable` | `bool` | flag `UF_PASSWD_CANT_CHANGE` invertida |
 | `SmartcardRequired` | `bool` | flag `UF_SMARTCARD_REQUIRED` |
-| `LastLogon` | `string` | `usri3_last_logon` formatado |
-| `LastLogoff` | `string` | `usri3_last_logoff` formatado |
+| `LastLogon` | `string` | LDAP `lastLogonTimestamp` (replicado; granularidade de cerca de 14 dias) |
+| `LastLogoff` | `string` | não disponível via LDAP |
 | `Workstations` | `string` | `usri3_workstations` |
 | `LogonScript` | `string` | `usri3_script_path` |
 | `ProfilePath` | `string` | `usri3_profile` |
 | `HomeDirectory` | `string` | `usri3_home_dir` |
-| `LocalGroups` | `IReadOnlyList<string>` | `NetUserGetLocalGroups` |
-| `GlobalGroups` | `IReadOnlyList<string>` | LDAP `memberOf` |
+| `LocalGroups` | `IReadOnlyList<string>` | grupos de domínio local, incluindo aninhados |
+| `GlobalGroups` | `IReadOnlyList<string>` | grupos globais e universais, incluindo aninhados, mais o grupo primário |
 | `Domain` | `string` | `Environment.UserDomainName` |
 
 ### `SearchResultItem`
@@ -230,42 +227,21 @@ public sealed record SenhasExpiradasNavigationPreset(
 
 ### `NetUserService`
 
-Responsável por obter detalhes completos de um usuário via P/Invoke.
+Obtém o painel do usuário por LDAP: atributos da conta, `lastLogonTimestamp`, expiração calculada com `maxPwdAge` e grupos (regra em cadeia, separados em local de domínio e global/universal). O grupo primário (`primaryGroupID`) entra na lista correspondente.
 
-**API Win32 utilizada:**
-- `NetUserGetInfo(server, username, 3, out buffer)` — retorna `USER_INFO_3` com ~40 campos
-- `NetUserGetLocalGroups(server, username, 0, LG_INCLUDE_INDIRECT, ...)` — grupos locais incluindo membros indiretos
-- `NetApiBufferFree(buffer)` — libera buffer alocado pelo sistema
+### `LdapDirectory`
 
-**Fluxo:**
-```
-GetUserDetailsAsync(sam, ct)
-  └─ Task.Run → GetUserDetailsCore
-       ├─ GetDomainController()          ← resolve DC via NetGetDCName
-       ├─ NetUserGetInfo(level 3)        ← dados principais
-       ├─ GetLocalGroups()               ← via NetUserGetLocalGroups
-       ├─ GetGlobalGroupsViaLdap()       ← via DirectorySearcher, atributo memberOf
-       └─ BuildUserInfo()                ← monta objeto UserInfo
-```
-
-**Tratamento de timestamps:**
-- `usri3_last_logon` e `usri3_last_logoff` são segundos desde 01/01/1970 (Unix epoch)
-- `usri3_password_age` é a idade da senha em segundos; a data é calculada como `DateTime.Now - TimeSpan.FromSeconds(age)`
-- `usri3_acct_expires` é segundos desde 01/01/1970; valor `0` ou `TIMEQ_FOREVER` indica sem expiração
+Caminho LDAP do domínio e `maxPwdAge` ficam em cache no processo. `RefreshPasswordPolicyAsync` relê a política (o dashboard faz isso ao atualizar). Consultas paginadas param no limite e devolvem `QueryResult<T>.Truncated`.
 
 ### `ActiveDirectorySearchService`
 
 Busca usuários por nome parcial via LDAP.
 
-**Filtro LDAP:**
-```
-(&(objectClass=user)(objectCategory=person)
-  (|(displayName=*termo*)(cn=*termo*)(givenName=*termo*)(sn=*termo*)))
-```
+**Filtro LDAP:** contas ativas, por nome ou login (`displayName`, `cn`, `givenName`, `sn`, `sAMAccountName`).
 
 **Atributos retornados:** `sAMAccountName`, `displayName`
 
-**Limite:** 100 resultados. **Ordenação:** alfabética por `displayName` (todas as listas de contas do app seguem esse critério).
+**Limite:** a busca lê todas as páginas. A tela só avisa se passar do freio de segurança (100.000 itens). **Ordenação:** alfabética por `displayName`.
 
 **Resolução do domínio** (em ordem de prioridade):
 1. `Domain.GetComputerDomain().Name`
@@ -497,7 +473,7 @@ Seleciona usuário → NetUserService.GetUserDetailsAsync(sam)
 
 ### `SenhasExpiradasPage`
 
-Lista contas com senha expirando (política 180 dias) ou obrigadas a trocar no próximo logon.
+Lista contas com senha expirando segundo `maxPwdAge` do domínio, ou obrigadas a trocar no próximo logon.
 
 **Tipos de busca (ComboBox):** Expirando em data específica, Expirando em intervalo de datas, Expirando hoje, Obrigado a trocar no próximo logon. Todas as listas são ordenadas alfabeticamente por `DisplayName`.
 
@@ -659,14 +635,9 @@ Usuário digita login/nome/grupo
         ▼
    Service (Task.Run)
         │
-        ├─ NetUserService ──── P/Invoke ──► netapi32.dll ──► Domain Controller
-        │                                                          │
-        │                                                     USER_INFO_3
-        │                                                     LocalGroups
-        │
-        ├─ ActiveDirectorySearchService ── LDAP ──► AD (busca por nome)
-        │
-        └─ GroupService ────────────────── LDAP ──► AD (grupos e membros)
+        ├─ NetUserService ────────────── LDAP ──► detalhes, grupos e lastLogonTimestamp
+        ├─ ActiveDirectorySearchService ── LDAP ──► buscas, senhas, bloqueio
+        └─ GroupService ────────────────── LDAP ──► grupos e membros
                 │
                 ▼
            UserInfo / List<SearchResultItem> / List<GroupItem>
@@ -745,10 +716,7 @@ foreach ($rid in $rids) {
 
 ## 12. Segurança e Permissões
 
-**UAC (`requireAdministrator`):** O app solicita elevação ao iniciar. Necessário para:
-- `NetUserGetInfo` (level 3) — requer privilégios de administrador de domínio ou local
-- `NetUserGetLocalGroups` com flag `LG_INCLUDE_INDIRECT`
-- Acesso LDAP para leitura de atributos protegidos
+**Elevação:** o manifesto pede `asInvoker`. O app não solicita UAC. A leitura usa a credencial do usuário logado no Windows.
 
 **Escopo de leitura:** O app realiza apenas operações de **leitura** no AD. Nenhuma escrita, modificação ou exclusão é realizada.
 

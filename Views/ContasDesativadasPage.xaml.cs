@@ -38,11 +38,13 @@ public sealed partial class ContasDesativadasPage : Page
 
         try
         {
-            var list = await ActiveDirectorySearchService.GetDisabledAccountsAsync(ct);
-            _resultados = list;
-            ResultadoListView.ItemsSource = list;
-            ContadorTextBlock.Text = ContagemPt.Texto(
-                list.Count,
+            var busca = await ActiveDirectorySearchService.GetDisabledAccountsAsync(ct);
+            _resultados = busca.Items.ToList();
+            ResultadoListView.ItemsSource = _resultados;
+            ContadorTextBlock.Text = ContagemPt.TextoLista(
+                _resultados.Count,
+                busca.Truncated,
+                busca.Limit,
                 "Nenhuma conta desativada.",
                 "1 conta desativada.",
                 "{0} contas desativadas.");

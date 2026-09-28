@@ -31,7 +31,7 @@
 Visão geral com **KPIs** e **gráficos** (LiveCharts) para:
 
 - **Contas Bloqueadas** (LDAP `lockoutTime >= 1`)
-- **Senhas que expiram hoje** (cálculo a partir de `pwdLastSet` + política de **180 dias**)
+- **Senhas que expiram hoje** (cálculo a partir de `pwdLastSet` + `maxPwdAge` do domínio)
 - **Senhas que expiram em 1 semana** (janela de 7 dias)
 - **Obrigados a trocar no próximo logon** (LDAP `pwdLastSet = 0`)
 
@@ -87,7 +87,7 @@ Lista de contas de usuário desativadas no Active Directory (userAccountControl 
 | 🪟 Sistema Operacional | Windows 10 versão 1809 (build 17763) ou superior |
 | 🏗️ Arquitetura | x64 — também disponível x86 e arm64 |
 | 🌐 Domínio | Máquina ingressada no Active Directory |
-| 🔑 Privilégio | Administrador local (UAC solicitado ao abrir) |
+| 🔑 Privilégio | Leitura no Active Directory com a credencial do Windows logado |
 
 > 💡 **Windows 11** → experiência completa com efeito Mica
 > 💡 **Windows 10** → funciona normalmente, sem o efeito Mica (fallback automático)
@@ -151,16 +151,14 @@ O EXE gerado em `publish\win-x64\UserTrace.exe` é **self-contained**, **comprim
 | LiveCharts (WinUI) | 2.0.0-rc6.1 |
 | Mica Backdrop | Windows 11 |
 | System.DirectoryServices | 9.0.2 |
-| P/Invoke `netapi32.dll` | Win32 API |
 
 ---
 
 ## 🔒 Segurança
 
 - 🛡️ **Somente leitura** — nenhuma escrita, modificação ou exclusão no AD
-- 🔐 **Autenticação integrada** — usa as credenciais Windows do usuário logado (Kerberos/NTLM), sem solicitar senhas
+- 🔐 **Autenticação integrada** — usa as credenciais Windows do usuário logado (Kerberos/NTLM), sem solicitar senhas e sem elevar o processo
 - 💾 **Sem persistência** — nenhum dado é gravado em disco, log ou rede
-- ⚠️ **UAC obrigatório** — necessário para acesso ao nível 3 da API `NetUserGetInfo`
 
 ---
 

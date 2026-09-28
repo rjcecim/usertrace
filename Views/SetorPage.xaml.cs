@@ -11,6 +11,8 @@ public sealed partial class SetorPage : Page
 {
     private const string SetorSemOffice = "(Sem setor)";
     private List<string> _todosSetores = [];
+    private bool _setoresTruncados;
+    private int _setoresLimite;
     private CancellationTokenSource? _ctsSetores;
     private CancellationTokenSource? _ctsUsuarios;
     private CancellationTokenSource? _ctsDetalhes;
@@ -59,7 +61,9 @@ public sealed partial class SetorPage : Page
         {
             var setores = await ActiveDirectorySearchService.GetAllOfficesAsync(ct);
 
-            _todosSetores = [SetorSemOffice, .. setores];
+            _todosSetores = [SetorSemOffice, .. setores.Items];
+            _setoresTruncados = setores.Truncated;
+            _setoresLimite = setores.Limit;
             AplicarFiltroSetores();
         }
         catch (OperationCanceledException)
@@ -87,11 +91,14 @@ public sealed partial class SetorPage : Page
 
         var setorSelecionado = SetoresListView.SelectedItem as string;
         SetoresListView.ItemsSource = setoresFiltrados;
-        SetoresContadorText.Text = ContagemPt.Texto(
+        var textoSetores = ContagemPt.Texto(
             setoresFiltrados.Count,
             "Nenhum setor encontrado.",
             "1 setor encontrado.",
             "{0} setores encontrados.");
+        if (_setoresTruncados)
+            textoSetores += $" A leitura parou em {_setoresLimite} contas; algum setor pode ter ficado de fora.";
+        SetoresContadorText.Text = textoSetores;
 
         if (string.IsNullOrWhiteSpace(setorSelecionado) || !setoresFiltrados.Contains(setorSelecionado))
         {
@@ -132,12 +139,14 @@ public sealed partial class SetorPage : Page
             var usuarios = setor == SetorSemOffice
                 ? await ActiveDirectorySearchService.GetUsersWithoutOfficeAsync(ct)
                 : await ActiveDirectorySearchService.GetUsersByOfficeAsync(setor, ct);
-            _usuariosDoSetor = usuarios;
+            _usuariosDoSetor = usuarios.Items.ToList();
             _setorAtual      = setor;
-            UsuariosListView.ItemsSource = usuarios;
+            UsuariosListView.ItemsSource = _usuariosDoSetor;
 
-            UsuariosContadorText.Text = ContagemPt.Texto(
-                usuarios.Count,
+            UsuariosContadorText.Text = ContagemPt.TextoLista(
+                _usuariosDoSetor.Count,
+                usuarios.Truncated,
+                usuarios.Limit,
                 "Nenhum usuário encontrado.",
                 "1 usuário encontrado.",
                 "{0} usuários encontrados.");

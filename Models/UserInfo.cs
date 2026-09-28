@@ -2,7 +2,6 @@ namespace UserTrace.Models;
 
 /// <summary>
 /// Dados estruturados de um usuário do Active Directory.
-/// Retornado pelo NetUserService em vez de texto plano.
 /// </summary>
 public sealed class UserInfo
 {

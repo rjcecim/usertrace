@@ -138,7 +138,16 @@ public sealed partial class UserInfoPanel : UserControl
         SenhaExpiraText.Text   = string.IsNullOrWhiteSpace(u.PasswordExpiresOn)
             ? (u.PasswordNeverExpires ? "Nunca" : "Conforme política")
             : u.PasswordExpiresOn;
-        DiasParaExpirarText.Text = string.IsNullOrWhiteSpace(u.PasswordDaysToExpire) ? "—" : u.PasswordDaysToExpire;
+        if (int.TryParse(u.PasswordDaysToExpire, out var diasParaExpirar) && diasParaExpirar < 0)
+        {
+            DiasParaExpirarLabel.Text = "Vencida há (dias)";
+            DiasParaExpirarText.Text = (-diasParaExpirar).ToString();
+        }
+        else
+        {
+            DiasParaExpirarLabel.Text = "Faltam (dias) para expirar";
+            DiasParaExpirarText.Text = string.IsNullOrWhiteSpace(u.PasswordDaysToExpire) ? "—" : u.PasswordDaysToExpire;
+        }
         BadPasswordCountText.Text = u.BadPasswordCount;
         BadPasswordTimeText.Text  = u.BadPasswordTime;
         LockoutTimeText.Text      = string.IsNullOrWhiteSpace(u.LockoutTime) ? "—" : u.LockoutTime;

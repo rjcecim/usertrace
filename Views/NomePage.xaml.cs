@@ -56,12 +56,14 @@ public sealed partial class NomePage : Page
 
         try
         {
-            var items = await ActiveDirectorySearchService.SearchByNameAsync(termo, ct);
+            var busca = await ActiveDirectorySearchService.SearchByNameAsync(termo, ct);
 
-            _resultados = items;
-            ResultadoListView.ItemsSource = items;
-            ContadorTextBlock.Text = ContagemPt.Texto(
-                items.Count,
+            _resultados = busca.Items.ToList();
+            ResultadoListView.ItemsSource = _resultados;
+            ContadorTextBlock.Text = ContagemPt.TextoLista(
+                _resultados.Count,
+                busca.Truncated,
+                busca.Limit,
                 "Nenhum resultado.",
                 "1 usuário encontrado.",
                 "{0} usuários encontrados.");

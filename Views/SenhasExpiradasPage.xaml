@@ -26,7 +26,7 @@
                     VerticalAlignment="Center"/>
             </StackPanel>
             <TextBlock
-                Text="Busca senhas que expiram em 180 dias ou contas obrigadas a trocar no próximo logon."
+                Text="Busca senhas que expiram pela política do domínio, ou contas obrigadas a trocar no próximo logon."
                 Style="{StaticResource PageDescriptionStyle}"/>
         </StackPanel>
 

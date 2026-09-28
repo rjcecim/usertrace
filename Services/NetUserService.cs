@@ -1,498 +1,238 @@
 using System.DirectoryServices;
-using System.DirectoryServices.ActiveDirectory;
-using System.Runtime.InteropServices;
+using UserTrace.Core;
 using UserTrace.Models;
 
 namespace UserTrace.Services;
 
 public static class NetUserService
 {
-    #region P/Invoke declarations
+    private const int UfAccountDisable = 0x0002;
+    private const int UfPasswdNotReqd = 0x0020;
+    private const int UfPasswdCantChange = 0x0040;
+    private const int UfDontExpirePasswd = 0x10000;
+    private const int UfSmartcardRequired = 0x40000;
+    private const int UfPasswordExpired = 0x800000;
 
-    [DllImport("netapi32.dll", CharSet = CharSet.Unicode, SetLastError = false)]
-    private static extern int NetUserGetInfo(
-        string? servername,
-        string  username,
-        int     level,
-        out IntPtr bufptr);
+    private const int GroupDomainLocal = 0x00000004;
 
-    [DllImport("netapi32.dll", CharSet = CharSet.Unicode, SetLastError = false)]
-    private static extern int NetUserGetLocalGroups(
-        string? servername,
-        string  username,
-        int     level,
-        int     flags,
-        out IntPtr bufptr,
-        int     prefmaxlen,
-        out int entriesread,
-        out int totalentries);
-
-    [DllImport("netapi32.dll")]
-    private static extern int NetApiBufferFree(IntPtr buffer);
-
-    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-    private struct USER_INFO_3
-    {
-        public string?  usri3_name;
-        public string?  usri3_password;
-        public uint     usri3_password_age;
-        public uint     usri3_priv;
-        public string?  usri3_home_dir;
-        public string?  usri3_comment;
-        public uint     usri3_flags;
-        public string?  usri3_script_path;
-        public uint     usri3_auth_flags;
-        public string?  usri3_full_name;
-        public string?  usri3_usr_comment;
-        public string?  usri3_parms;
-        public string?  usri3_workstations;
-        public uint     usri3_last_logon;
-        public uint     usri3_last_logoff;
-        public uint     usri3_acct_expires;
-        public uint     usri3_max_storage;
-        public uint     usri3_units_per_week;
-        public IntPtr   usri3_logon_hours;
-        public uint     usri3_bad_pw_count;
-        public uint     usri3_num_logons;
-        public string?  usri3_logon_server;
-        public uint     usri3_country_code;
-        public uint     usri3_code_page;
-        public uint     usri3_user_id;
-        public uint     usri3_primary_group_id;
-        public string?  usri3_profile;
-        public string?  usri3_home_dir_drive;
-        public uint     usri3_password_expired;
-    }
-
-    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-    private struct LOCALGROUP_USERS_INFO_0
-    {
-        public string? lgrui0_name;
-    }
-
-    private const int  NERR_Success         = 0;
-    private const int  NERR_UserNotFound     = 2221;
-    private const int  ERROR_ACCESS_DENIED   = 5;
-    private const int  RPC_S_SERVER_UNAVAIL  = 1722;
-    private const int  MAX_PREFERRED_LENGTH  = -1;
-    private const int  LG_INCLUDE_INDIRECT   = 0x0001;
-
-    private const uint UF_ACCOUNTDISABLE     = 0x0002;
-    private const uint UF_PASSWD_NOTREQD     = 0x0020;
-    private const uint UF_PASSWD_CANT_CHANGE = 0x0040;
-    private const uint UF_DONT_EXPIRE_PASSWD = 0x10000;
-    private const uint UF_SMARTCARD_REQUIRED = 0x40000;
-    private const uint UF_PASSWORD_EXPIRED   = 0x800000;
-
-    // Mantém a mesma política usada em ActiveDirectorySearchService (Senhas expiradas).
-    private const int PasswordMaxAgeDays = 180;
-
-    #endregion
+    private static readonly string[] UserProperties =
+    [
+        "sAMAccountName",
+        "displayName",
+        "mail",
+        "telephoneNumber",
+        "physicalDeliveryOfficeName",
+        "distinguishedName",
+        "description",
+        "comment",
+        "userAccountControl",
+        "accountExpires",
+        "pwdLastSet",
+        "badPwdCount",
+        "badPasswordTime",
+        "lockoutTime",
+        "lastLogonTimestamp",
+        "userWorkstations",
+        "scriptPath",
+        "profilePath",
+        "homeDirectory",
+        "objectSid",
+        "primaryGroupID"
+    ];
 
     public static Task<CommandResult> GetUserDetailsAsync(
         string samAccountName,
-        CancellationToken cancellationToken = default)
-    {
-        return Task.Run(() => GetUserDetailsCore(samAccountName, cancellationToken), cancellationToken);
-    }
+        CancellationToken cancellationToken = default) =>
+        Task.Run(() => GetUserDetailsCore(samAccountName, cancellationToken), cancellationToken);
 
     private static CommandResult GetUserDetailsCore(string sam, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
 
-        string? dc = GetDomainController();
+        var login = sam.Trim();
+        if (string.IsNullOrEmpty(login))
+            return new CommandResult { Error = "Informe o login.", ExitCode = 1 };
 
-        IntPtr buf = IntPtr.Zero;
         try
         {
-            int result = NetUserGetInfo(dc, sam, 3, out buf);
-
-            if (result != NERR_Success)
+            using var root = LdapDirectory.OpenRoot();
+            using var searcher = new DirectorySearcher(root)
             {
-                string msg = result switch
+                Filter = $"(&(objectCategory=person)(objectClass=user)(sAMAccountName={LdapFilter.Escape(login)}))",
+                SearchScope = SearchScope.Subtree,
+                SizeLimit = 1
+            };
+
+            foreach (var property in UserProperties)
+                searcher.PropertiesToLoad.Add(property);
+
+            var result = searcher.FindOne();
+            if (result is null)
+            {
+                return new CommandResult
                 {
-                    NERR_UserNotFound    => $"O nome de usuário '{sam}' não foi encontrado.",
-                    ERROR_ACCESS_DENIED  => "Acesso negado. Verifique suas permissões no domínio.",
-                    RPC_S_SERVER_UNAVAIL => "O servidor RPC não está disponível. Verifique a conectividade com o DC.",
-                    _                    => $"Erro da API Win32: código {result}."
+                    Error = $"O nome de usuário '{login}' não foi encontrado.",
+                    ExitCode = 2221
                 };
-                return new CommandResult { Error = msg, ExitCode = result };
             }
 
             ct.ThrowIfCancellationRequested();
-
-            var u = Marshal.PtrToStructure<USER_INFO_3>(buf);
-
-            ct.ThrowIfCancellationRequested();
-
-            var localGroups  = GetLocalGroups(dc, sam);
-            var globalGroups = GetGlobalGroupsViaLdap(sam, dc);
-
-            var userInfo = BuildUserInfo(sam, u, localGroups, globalGroups, dc);
-            return new CommandResult { UserInfo = userInfo, ExitCode = 0 };
+            var user = BuildUserInfo(login, root, result, ct);
+            return new CommandResult { UserInfo = user, ExitCode = 0 };
         }
-        finally
+        catch (OperationCanceledException)
         {
-            if (buf != IntPtr.Zero)
-                NetApiBufferFree(buf);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            return new CommandResult
+            {
+                Error = $"Falha ao consultar o Active Directory: {ex.Message}",
+                ExitCode = 1
+            };
         }
     }
 
-    private static UserInfo BuildUserInfo(
-        string sam, USER_INFO_3 u,
-        List<string> localGroups, List<string> globalGroups,
-        string? dc)
+    private static UserInfo BuildUserInfo(string sam, DirectoryEntry root, SearchResult result, CancellationToken ct)
     {
-        var ad = GetAdIdentityProps(sam, dc);
+        var flags = LdapDirectory.ReadInt32(result, "userAccountControl");
+        var passwordNeverExpires = HasFlag(flags, UfDontExpirePasswd);
+        var pwdLastSet = LdapDirectory.ReadInt64(result, "pwdLastSet");
+        var policy = LdapDirectory.GetPasswordPolicy();
+        var expiry = PasswordExpiry.Describe(policy, passwordNeverExpires, pwdLastSet, DateTime.Today);
 
-        var passwordNeverExpires = HasFlag(u.usri3_flags, UF_DONT_EXPIRE_PASSWD);
-        var passwordExpiredFlag  = HasFlag(u.usri3_flags, UF_PASSWORD_EXPIRED);
-
-        var passwordLastSetText =
-            !string.IsNullOrWhiteSpace(ad.PasswordLastSet)
-                ? ad.PasswordLastSet
-                : FormatPasswordAge(u.usri3_password_age);
-
-        string passwordExpiresOnText;
-        string passwordDaysToExpireText;
-        CalculatePasswordExpiry(
-            passwordNeverExpires,
-            ad.PwdLastSetFileTime,
-            out passwordExpiresOnText,
-            out passwordDaysToExpireText);
+        var (localGroups, globalGroups) = LoadGroups(root, result, ct);
+        var workstations = LdapDirectory.ReadString(result, "userWorkstations");
+        var fullName = LdapDirectory.ReadString(result, "displayName");
 
         return new UserInfo
         {
-            SamAccountName    = u.usri3_name    ?? sam,
-            FullName          = u.usri3_full_name ?? string.Empty,
-            Email             = ad.Email,
-            PhoneNumber       = ad.PhoneNumber,
-            Office            = ad.Office,
-            OrganizationalUnit = ad.OrganizationalUnit,
-            Comment           = u.usri3_comment  ?? string.Empty,
-            UserComment       = u.usri3_usr_comment ?? string.Empty,
+            SamAccountName = FirstNonEmpty(LdapDirectory.ReadString(result, "sAMAccountName"), sam),
+            FullName = fullName,
+            Email = LdapDirectory.ReadString(result, "mail"),
+            PhoneNumber = LdapDirectory.ReadString(result, "telephoneNumber"),
+            Office = LdapDirectory.ReadString(result, "physicalDeliveryOfficeName"),
+            OrganizationalUnit = DistinguishedNameParser.ExtractOuPath(
+                LdapDirectory.ReadString(result, "distinguishedName")),
+            Comment = LdapDirectory.ReadString(result, "description"),
+            UserComment = LdapDirectory.ReadString(result, "comment"),
 
-            AccountActive     = !HasFlag(u.usri3_flags, UF_ACCOUNTDISABLE),
-            AccountExpires    = FormatTimestamp(u.usri3_acct_expires),
+            AccountActive = !HasFlag(flags, UfAccountDisable),
+            AccountExpires = AdFileTime.FormatAccountExpires(LdapDirectory.ReadInt64(result, "accountExpires")),
 
-            PasswordLastSet      = passwordLastSetText,
-            PasswordExpiresOn    = passwordExpiresOnText,
-            PasswordDaysToExpire = passwordDaysToExpireText,
-            BadPasswordCount     = ad.BadPasswordCount,
-            BadPasswordTime      = ad.BadPasswordTime,
-            LockoutTime          = ad.LockoutTime,
+            PasswordLastSet = AdFileTime.FormatLocal(pwdLastSet, "No próximo logon"),
+            PasswordExpiresOn = expiry.ExpiresOn,
+            PasswordDaysToExpire = expiry.DaysToExpire,
+            BadPasswordCount = FirstNonEmpty(LdapDirectory.ReadString(result, "badPwdCount"), "0"),
+            BadPasswordTime = AdFileTime.FormatLocal(LdapDirectory.ReadInt64(result, "badPasswordTime"), "Nunca"),
+            LockoutTime = AdFileTime.FormatLocal(LdapDirectory.ReadInt64(result, "lockoutTime"), "Não bloqueada"),
             PasswordNeverExpires = passwordNeverExpires,
-            PasswordExpired      = passwordExpiredFlag,
-            PasswordRequired     = !HasFlag(u.usri3_flags, UF_PASSWD_NOTREQD),
-            PasswordChangeable   = !HasFlag(u.usri3_flags, UF_PASSWD_CANT_CHANGE),
-            SmartcardRequired    = HasFlag(u.usri3_flags, UF_SMARTCARD_REQUIRED),
+            PasswordExpired = HasFlag(flags, UfPasswordExpired) || expiry.Expired,
+            PasswordRequired = !HasFlag(flags, UfPasswdNotReqd),
+            PasswordChangeable = !HasFlag(flags, UfPasswdCantChange),
+            SmartcardRequired = HasFlag(flags, UfSmartcardRequired),
 
-            LastLogon      = FormatTimestamp(u.usri3_last_logon),
-            LastLogoff     = FormatTimestamp(u.usri3_last_logoff),
-            Workstations   = string.IsNullOrEmpty(u.usri3_workstations) ? "Todas" : u.usri3_workstations,
-            LogonScript    = u.usri3_script_path  ?? string.Empty,
-            ProfilePath    = u.usri3_profile      ?? string.Empty,
-            HomeDirectory  = u.usri3_home_dir     ?? string.Empty,
+            LastLogon = AdFileTime.FormatLocal(LdapDirectory.ReadInt64(result, "lastLogonTimestamp"), "Nunca"),
+            LastLogoff = "Não disponível",
+            Workstations = string.IsNullOrEmpty(workstations) ? "Todas" : workstations,
+            LogonScript = LdapDirectory.ReadString(result, "scriptPath"),
+            ProfilePath = LdapDirectory.ReadString(result, "profilePath"),
+            HomeDirectory = LdapDirectory.ReadString(result, "homeDirectory"),
 
-            LocalGroups    = localGroups.AsReadOnly(),
-            GlobalGroups   = globalGroups.AsReadOnly(),
-
-            Domain = dc ?? Environment.UserDomainName
+            LocalGroups = localGroups,
+            GlobalGroups = globalGroups,
+            Domain = LdapDirectory.GetDomainDnsName()
         };
     }
 
-    private readonly record struct AdIdentityProps(
-        string Email,
-        string PhoneNumber,
-        string Office,
-        string OrganizationalUnit,
-        string BadPasswordCount,
-        string BadPasswordTime,
-        string LockoutTime,
-        string PasswordLastSet,
-        long   PwdLastSetFileTime);
-
-    private static AdIdentityProps GetAdIdentityProps(string sam, string? dc)
+    private static (IReadOnlyList<string> Local, IReadOnlyList<string> Global) LoadGroups(
+        DirectoryEntry root,
+        SearchResult user,
+        CancellationToken ct)
     {
-        try
+        var local = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
+        var global = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        var dn = LdapDirectory.ReadString(user, "distinguishedName");
+        if (!string.IsNullOrEmpty(dn))
         {
-            string ldapPath = string.IsNullOrEmpty(dc) ? "LDAP://" : $"LDAP://{dc}";
-            using var root = new DirectoryEntry(ldapPath);
             using var searcher = new DirectorySearcher(root)
             {
-                Filter      = $"(&(objectCategory=person)(objectClass=user)(sAMAccountName={EscapeLdap(sam)}))",
+                Filter = $"(&(objectCategory=group)(member:1.2.840.113556.1.4.1941:={LdapFilter.Escape(dn)}))",
                 SearchScope = SearchScope.Subtree,
-                SizeLimit   = 1
+                PageSize = 500,
+                SizeLimit = 0
             };
+            searcher.PropertiesToLoad.Add("cn");
+            searcher.PropertiesToLoad.Add("groupType");
 
-            searcher.PropertiesToLoad.Add("mail");
-            searcher.PropertiesToLoad.Add("telephoneNumber");
-            searcher.PropertiesToLoad.Add("physicalDeliveryOfficeName");
-            searcher.PropertiesToLoad.Add("distinguishedName");
-            searcher.PropertiesToLoad.Add("badPwdCount");
-            searcher.PropertiesToLoad.Add("badPasswordTime");
-            searcher.PropertiesToLoad.Add("lockoutTime");
-            searcher.PropertiesToLoad.Add("pwdLastSet");
-
-            var result = searcher.FindOne();
-            if (result == null) return default;
-
-            string GetProp(string name)
+            using var found = searcher.FindAll();
+            foreach (SearchResult sr in found)
             {
-                var props = result.Properties[name];
-                if (props == null || props.Count == 0) return string.Empty;
-                return props[0]?.ToString() ?? string.Empty;
-            }
+                ct.ThrowIfCancellationRequested();
+                var name = LdapDirectory.ReadString(sr, "cn");
+                if (string.IsNullOrEmpty(name))
+                    continue;
 
-            return new AdIdentityProps(
-                Email:       GetProp("mail"),
-                PhoneNumber: GetProp("telephoneNumber"),
-                Office:      GetProp("physicalDeliveryOfficeName"),
-                OrganizationalUnit: ExtractOuPathUntilTribunal(GetProp("distinguishedName")),
-                BadPasswordCount: GetProp("badPwdCount"),
-                BadPasswordTime: FormatAdFileTime(GetAdProp(result, "badPasswordTime"), zeroText: "Nunca"),
-                LockoutTime:     FormatAdFileTime(GetAdProp(result, "lockoutTime"),    zeroText: "Não bloqueada"),
-                PasswordLastSet: FormatAdFileTime(GetAdProp(result, "pwdLastSet"),      zeroText: "No próximo logon"),
-                PwdLastSetFileTime: TryReadAdFileTime(GetAdProp(result, "pwdLastSet")));
-        }
-        catch
-        {
-            return default;
-        }
-    }
+                if (HasFlag(LdapDirectory.ReadInt32(sr, "groupType"), GroupDomainLocal))
+                    local.Add(name);
+                else
+                    global.Add(name);
 
-    private static string ExtractOuPathUntilTribunal(string distinguishedName)
-    {
-        if (string.IsNullOrWhiteSpace(distinguishedName)) return string.Empty;
-
-        // Ex.:
-        // CN=0101093,OU=CIS,OU=SETIN,OU=Tribunal,DC=tce,DC=pa   => SETIN\CIS
-        // CN=0100054,OU=CPA,OU=DILP,OU=SEADM,OU=Tribunal,...    => SEADM\DILP\CPA
-        //
-        // Regra: pega as OUs após o CN até (mas sem incluir) a OU=Tribunal,
-        // inverte (da OU mais alta para a mais próxima do CN) e junta com "\".
-        var parts = distinguishedName.Split(',');
-
-        var ous = new List<string>(capacity: 6);
-        var seenCn = false;
-        foreach (var part in parts)
-        {
-            var t = part.Trim();
-            if (!seenCn)
-            {
-                if (t.StartsWith("CN=", StringComparison.OrdinalIgnoreCase))
-                    seenCn = true;
-                continue;
-            }
-
-            if (t.StartsWith("OU=", StringComparison.OrdinalIgnoreCase))
-            {
-                var ou = t.Length > 3 ? t[3..] : string.Empty;
-                if (string.Equals(ou, "Tribunal", StringComparison.OrdinalIgnoreCase))
+                if (local.Count + global.Count >= SearchLimits.Safety)
                     break;
-
-                if (!string.IsNullOrWhiteSpace(ou))
-                    ous.Add(ou);
-                continue;
-            }
-
-            if (t.StartsWith("DC=", StringComparison.OrdinalIgnoreCase))
-                break;
-        }
-
-        if (ous.Count == 0) return string.Empty;
-        ous.Reverse();
-        return string.Join("\\", ous);
-    }
-
-    private static object? GetAdProp(SearchResult result, string name)
-    {
-        var props = result.Properties[name];
-        if (props == null || props.Count == 0) return null;
-        return props[0];
-    }
-
-    private static string FormatAdFileTime(object? value, string zeroText)
-    {
-        long fileTime = TryReadAdFileTime(value);
-        if (fileTime <= 0) return zeroText;
-
-        try
-        {
-            // FILETIME: 100ns intervals since 1601-01-01 (UTC).
-            return DateTime.FromFileTimeUtc(fileTime).ToLocalTime().ToString("dd/MM/yyyy HH:mm");
-        }
-        catch
-        {
-            return zeroText;
-        }
-    }
-
-    private static long TryReadAdFileTime(object? value)
-    {
-        if (value == null) return 0;
-
-        // DirectoryServices pode retornar Int64 direto.
-        if (value is long l) return l;
-        if (value is int i) return i;
-        if (value is IConvertible c)
-        {
-            try { return c.ToInt64(null); } catch { }
-        }
-
-        // Ou um COM (IADsLargeInteger) com HighPart/LowPart.
-        try
-        {
-            var t = value.GetType();
-            var highProp = t.GetProperty("HighPart");
-            var lowProp  = t.GetProperty("LowPart");
-            if (highProp != null && lowProp != null)
-            {
-                int high = Convert.ToInt32(highProp.GetValue(value, null));
-                int low  = Convert.ToInt32(lowProp.GetValue(value, null));
-                return ((long)high << 32) | (uint)low;
             }
         }
-        catch { }
 
-        return 0;
+        AddPrimaryGroup(root, user, local, global);
+        return (local.ToList(), global.ToList());
     }
 
-    private static void CalculatePasswordExpiry(
-        bool passwordNeverExpires,
-        long pwdLastSetFileTime,
-        out string passwordExpiresOn,
-        out string passwordDaysToExpire)
+    private static void AddPrimaryGroup(
+        DirectoryEntry root,
+        SearchResult user,
+        SortedSet<string> local,
+        SortedSet<string> global)
     {
-        if (passwordNeverExpires)
-        {
-            passwordExpiresOn  = "Nunca";
-            passwordDaysToExpire = "—";
+        var sid = LdapDirectory.ReadBytes(user, "objectSid");
+        if (sid is null || sid.Length < 8)
             return;
-        }
 
-        // pwdLastSet = 0 → deve trocar no próximo logon.
-        if (pwdLastSetFileTime <= 0)
-        {
-            passwordExpiresOn  = "No próximo logon";
-            passwordDaysToExpire = "—";
+        var primaryRid = LdapDirectory.ReadInt32(user, "primaryGroupID");
+        if (primaryRid <= 0)
             return;
-        }
 
-        try
+        var groupSid = (byte[])sid.Clone();
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt32LittleEndian(
+            groupSid.AsSpan(groupSid.Length - 4),
+            (uint)primaryRid);
+
+        using var searcher = new DirectorySearcher(root)
         {
-            var lastSet = DateTime.FromFileTimeUtc(pwdLastSetFileTime).ToLocalTime();
-            var expires = lastSet.AddDays(PasswordMaxAgeDays);
+            Filter = $"(objectSid={LdapFilter.EscapeBinary(groupSid)})",
+            SearchScope = SearchScope.Subtree,
+            SizeLimit = 1
+        };
+        searcher.PropertiesToLoad.Add("cn");
+        searcher.PropertiesToLoad.Add("groupType");
 
-            passwordExpiresOn = expires.ToString("dd/MM/yyyy HH:mm");
+        var result = searcher.FindOne();
+        if (result is null)
+            return;
 
-            var days = (expires.Date - DateTime.Today).Days;
-            if (days < 0) days = 0;
-            passwordDaysToExpire = days.ToString();
-        }
-        catch
-        {
-            passwordExpiresOn  = "Conforme política";
-            passwordDaysToExpire = "—";
-        }
+        var name = LdapDirectory.ReadString(result, "cn");
+        if (string.IsNullOrEmpty(name))
+            return;
+
+        if (HasFlag(LdapDirectory.ReadInt32(result, "groupType"), GroupDomainLocal))
+            local.Add(name);
+        else
+            global.Add(name);
     }
 
-    private static string? GetDomainController()
-    {
-        try { return Domain.GetComputerDomain().FindDomainController().Name; }
-        catch { return null; }
-    }
+    private static bool HasFlag(int flags, int flag) => (flags & flag) != 0;
 
-    private static List<string> GetLocalGroups(string? dc, string sam)
-    {
-        var groups = new List<string>();
-        IntPtr buf = IntPtr.Zero;
-        try
-        {
-            int result = NetUserGetLocalGroups(
-                dc, sam, 0, LG_INCLUDE_INDIRECT,
-                out buf, MAX_PREFERRED_LENGTH,
-                out int read, out _);
-
-            if (result != NERR_Success || buf == IntPtr.Zero)
-                return groups;
-
-            int size = Marshal.SizeOf<LOCALGROUP_USERS_INFO_0>();
-            for (int i = 0; i < read; i++)
-            {
-                var entry = Marshal.PtrToStructure<LOCALGROUP_USERS_INFO_0>(buf + i * size);
-                if (!string.IsNullOrEmpty(entry.lgrui0_name))
-                    groups.Add(entry.lgrui0_name);
-            }
-            groups.Sort(StringComparer.OrdinalIgnoreCase);
-        }
-        finally
-        {
-            if (buf != IntPtr.Zero) NetApiBufferFree(buf);
-        }
-        return groups;
-    }
-
-    private static List<string> GetGlobalGroupsViaLdap(string sam, string? dc)
-    {
-        var groups = new List<string>();
-        try
-        {
-            string ldapPath = string.IsNullOrEmpty(dc) ? "LDAP://" : $"LDAP://{dc}";
-            using var root    = new DirectoryEntry(ldapPath);
-            using var searcher = new DirectorySearcher(root)
-            {
-                Filter      = $"(&(objectClass=user)(sAMAccountName={EscapeLdap(sam)}))",
-                SearchScope = SearchScope.Subtree,
-                SizeLimit   = 1
-            };
-            searcher.PropertiesToLoad.Add("memberOf");
-
-            var result = searcher.FindOne();
-            if (result == null) return groups;
-
-            foreach (object? dn in result.Properties["memberOf"])
-            {
-                if (dn is string dnStr)
-                {
-                    var cn = ExtractCn(dnStr);
-                    if (!string.IsNullOrEmpty(cn)) groups.Add(cn);
-                }
-            }
-            groups.Sort(StringComparer.OrdinalIgnoreCase);
-        }
-        catch { }
-        return groups;
-    }
-
-    private static string ExtractCn(string dn)
-    {
-        foreach (var part in dn.Split(','))
-        {
-            var t = part.Trim();
-            if (t.StartsWith("CN=", StringComparison.OrdinalIgnoreCase))
-                return t[3..];
-        }
-        return string.Empty;
-    }
-
-    private static string EscapeLdap(string value) =>
-        value.Replace("\\", "\\5c").Replace("*", "\\2a")
-             .Replace("(", "\\28").Replace(")", "\\29")
-             .Replace("\0", "\\00").Replace("/", "\\2f");
-
-    private static bool HasFlag(uint flags, uint flag) => (flags & flag) != 0;
-
-    private static string FormatTimestamp(uint ts)
-    {
-        if (ts == 0 || ts == uint.MaxValue) return "Nunca";
-        try { return DateTimeOffset.FromUnixTimeSeconds(ts).LocalDateTime.ToString("dd/MM/yyyy HH:mm"); }
-        catch { return "Nunca"; }
-    }
-
-    private static string FormatPasswordAge(uint ageSeconds)
-    {
-        if (ageSeconds == 0) return "Nunca";
-        return DateTime.Now.AddSeconds(-(double)ageSeconds).ToString("dd/MM/yyyy HH:mm");
-    }
+    private static string FirstNonEmpty(string value, string fallback) =>
+        string.IsNullOrWhiteSpace(value) ? fallback : value;
 }

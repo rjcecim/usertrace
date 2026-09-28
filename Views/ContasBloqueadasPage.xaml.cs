@@ -38,11 +38,13 @@ public sealed partial class ContasBloqueadasPage : Page
 
         try
         {
-            var list = await ActiveDirectorySearchService.GetLockedOutAccountsAsync(ct);
-            _resultados = list;
-            ResultadoListView.ItemsSource = list;
-            ContadorTextBlock.Text = ContagemPt.Texto(
-                list.Count,
+            var busca = await ActiveDirectorySearchService.GetLockedOutAccountsAsync(ct);
+            _resultados = busca.Items.ToList();
+            ResultadoListView.ItemsSource = _resultados;
+            ContadorTextBlock.Text = ContagemPt.TextoLista(
+                _resultados.Count,
+                busca.Truncated,
+                busca.Limit,
                 "Nenhuma conta bloqueada.",
                 "1 conta bloqueada.",
                 "{0} contas bloqueadas.");
