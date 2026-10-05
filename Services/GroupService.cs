@@ -15,6 +15,24 @@ public static class GroupService
         CancellationToken cancellationToken = default) =>
         Task.Run(() => GetAllGroupsCore(filterName, cancellationToken), cancellationToken);
 
+    public static Task<QueryResult<GroupItem>> SearchGroupsLimitedAsync(
+        string? filterName,
+        int limit,
+        CancellationToken cancellationToken = default) =>
+        Task.Run(() =>
+        {
+            var nameFilter = string.IsNullOrWhiteSpace(filterName)
+                ? string.Empty
+                : $"(cn=*{LdapFilter.Escape(filterName.Trim())}*)";
+            var ldapFilter = $"(&(objectClass=group)(objectCategory=group){nameFilter})";
+            return LdapDirectory.Query(
+                ldapFilter,
+                ["cn", "description", "groupType"],
+                Math.Max(1, limit),
+                MapGroup,
+                cancellationToken);
+        }, cancellationToken);
+
     public static Task<QueryResult<SearchResultItem>> GetGroupMembersAsync(
         string groupName,
         CancellationToken cancellationToken = default) =>

@@ -8,8 +8,11 @@ using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media.Animation;
 using UserTrace.Helpers;
+using UserTrace.Models;
+using UserTrace.Services;
 using UserTrace.Views;
 using Windows.UI;
+using Windows.UI.Core;
 using WinUIEx;
 
 namespace UserTrace;
@@ -17,23 +20,30 @@ namespace UserTrace;
 public sealed partial class MainWindow : WindowEx
 {
     private bool _suppressNavSelectionChanged;
+    private DispatcherQueueTimer? _searchDebounce;
+    private CancellationTokenSource? _searchCts;
 
     public MainWindow()
     {
         InitializeComponent();
 
         Title = "UserTrace";
-        this.SetWindowSize(1160, 740);
+        this.SetWindowSize(1360, 860);
         this.CenterOnScreen();
         AppWindow.SetIcon(@"Assets\icon.ico");
+        VersionText.Text = VersaoProduto();
 
         // MICA BEST PRACTICE #4 — ExtendsContentIntoTitleBar = true
         // faz o conteúdo subir para trás da TitleBar, permitindo que o Mica
         // apareça de forma contínua da barra de título até o rodapé.
         ExtendsContentIntoTitleBar = true;
+        SetTitleBar(TitleBarHost);
+        NavView.PaneOpening += (_, _) => TitleBarPaneColumn.Width = new GridLength(NavView.OpenPaneLength);
+        NavView.PaneClosing += (_, _) => TitleBarPaneColumn.Width = new GridLength(NavView.CompactPaneLength);
 
         ConfigureTitleBar();
         TrySetMicaBackdrop();
+        _ = ProbeDirectoryAsync();
 
         NavView.SelectedItem = NavItemDashboard;
         // Precisa vir antes do Navigate inicial: senão a primeira página não dispara o handler
@@ -161,9 +171,169 @@ public sealed partial class MainWindow : WindowEx
         NavigateToMenu(tag, null);
     }
 
+    public void SetDirectoryConnection(bool connected)
+    {
+        if (connected)
+        {
+            var green = Color.FromArgb(255, 22, 163, 74);
+            ConnectionDot.Fill = new SolidColorBrush(green);
+            ConnectionText.Text = "Conectado ao AD";
+            ConnectionText.Foreground = new SolidColorBrush(green);
+            return;
+        }
+
+        var red = Color.FromArgb(255, 220, 38, 38);
+        ConnectionDot.Fill = new SolidColorBrush(red);
+        ConnectionText.Text = "Sem conexão com o AD";
+        ConnectionText.Foreground = new SolidColorBrush(red);
+    }
+
+    private async Task ProbeDirectoryAsync()
+    {
+        try
+        {
+            await Task.Run(LdapDirectory.Probe);
+            SetDirectoryConnection(true);
+        }
+        catch
+        {
+            SetDirectoryConnection(false);
+        }
+    }
+
+    private static string VersaoProduto()
+    {
+        var version = typeof(App).Assembly.GetName().Version;
+        return version is null
+            ? "UserTrace"
+            : $"UserTrace v{version.Major}.{version.Minor}.{version.Build}";
+    }
+
+    private void EnsureSearchDebounce()
+    {
+        if (_searchDebounce is not null) return;
+        _searchDebounce = DispatcherQueue.CreateTimer();
+        _searchDebounce.Interval = TimeSpan.FromMilliseconds(300);
+        _searchDebounce.IsRepeating = false;
+        _searchDebounce.Tick += async (_, _) => await RunGlobalSearchAsync();
+    }
+
+    private void GlobalSearchBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
+    {
+        if (args.Reason != AutoSuggestionBoxTextChangeReason.UserInput)
+            return;
+
+        EnsureSearchDebounce();
+        _searchDebounce!.Stop();
+        if (sender.Text.Trim().Length < 2)
+        {
+            _searchCts?.Cancel();
+            sender.ItemsSource = null;
+            sender.IsSuggestionListOpen = false;
+            return;
+        }
+
+        _searchDebounce.Start();
+    }
+
+    private async Task RunGlobalSearchAsync()
+    {
+        var term = GlobalSearchBox.Text.Trim();
+        if (term.Length < 2) return;
+
+        _searchCts?.Cancel();
+        _searchCts = new CancellationTokenSource();
+        var ct = _searchCts.Token;
+
+        try
+        {
+            var hits = await ActiveDirectorySearchService.SearchGlobalAsync(term, ct);
+            if (ct.IsCancellationRequested) return;
+            if (!string.Equals(GlobalSearchBox.Text.Trim(), term, StringComparison.Ordinal)) return;
+
+            GlobalSearchBox.ItemsSource = hits.Count == 0
+                ? new[] { GlobalSearchHit.None }
+                : hits.ToArray();
+            GlobalSearchBox.IsSuggestionListOpen = true;
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch
+        {
+            GlobalSearchBox.ItemsSource = new[] { GlobalSearchHit.None };
+            GlobalSearchBox.IsSuggestionListOpen = true;
+        }
+    }
+
+    private void GlobalSearchBox_SuggestionChosen(AutoSuggestBox sender, AutoSuggestBoxSuggestionChosenEventArgs args)
+    {
+        if (args.SelectedItem is GlobalSearchHit hit && !string.IsNullOrEmpty(hit.MenuTag))
+            AbrirBusca(hit);
+    }
+
+    private void GlobalSearchBox_QuerySubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs args)
+    {
+        if (args.ChosenSuggestion is GlobalSearchHit chosen && !string.IsNullOrEmpty(chosen.MenuTag))
+        {
+            AbrirBusca(chosen);
+            return;
+        }
+
+        if (sender.ItemsSource is IEnumerable<GlobalSearchHit> hits)
+        {
+            var first = hits.FirstOrDefault(hit => !string.IsNullOrEmpty(hit.MenuTag));
+            if (first is not null)
+            {
+                AbrirBusca(first);
+                return;
+            }
+        }
+
+        var text = sender.Text.Trim();
+        if (text.Length == 0 || text.Contains(' '))
+            return;
+
+        AbrirBusca(new GlobalSearchHit
+        {
+            Kind = "Usuário",
+            Title = text,
+            MenuTag = "Login",
+            Value = text
+        });
+    }
+
+    private void AbrirBusca(GlobalSearchHit hit)
+    {
+        _searchCts?.Cancel();
+        GlobalSearchBox.Text = string.Empty;
+        GlobalSearchBox.ItemsSource = null;
+        GlobalSearchBox.IsSuggestionListOpen = false;
+        NavigateToMenu(hit.MenuTag, hit.Value);
+    }
+
     private void Root_PreviewKeyDown(object sender, KeyRoutedEventArgs e)
     {
+        var ctrl = Microsoft.UI.Input.InputKeyboardSource.GetKeyStateForCurrentThread(Windows.System.VirtualKey.Control);
+        if (ctrl.HasFlag(CoreVirtualKeyStates.Down) && e.Key == Windows.System.VirtualKey.K)
+        {
+            GlobalSearchBox.Focus(FocusState.Programmatic);
+            e.Handled = true;
+            return;
+        }
+
         if (e.Key != Windows.System.VirtualKey.Escape) return;
+
+        if (!string.IsNullOrEmpty(GlobalSearchBox.Text) || GlobalSearchBox.IsSuggestionListOpen)
+        {
+            _searchCts?.Cancel();
+            GlobalSearchBox.Text = string.Empty;
+            GlobalSearchBox.ItemsSource = null;
+            GlobalSearchBox.IsSuggestionListOpen = false;
+            e.Handled = true;
+            return;
+        }
+
         if (ContentFrame.Content is DashboardPage) return;
         if (HasOpenOverlay()) return;
 

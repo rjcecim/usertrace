@@ -7,10 +7,11 @@ using LiveChartsCore.SkiaSharpView.Drawing.Geometries;
 using LiveChartsCore.SkiaSharpView.Painting;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using SkiaSharp;
-using System.Linq;
 using System.Globalization;
+using UserTrace.Helpers;
 using UserTrace.Models;
 using UserTrace.Services;
 
@@ -18,14 +19,18 @@ namespace UserTrace.Views;
 
 public sealed partial class DashboardPage : Page
 {
-    private CancellationTokenSource? _cts;
+    private const int PreviewCount = 5;
+    private static readonly CultureInfo PtBr = new("pt-BR");
 
+    private CancellationTokenSource? _cts;
     private string[]? _labels7;
     private int[]? _distribution7;
     private int _expiringTodayCount;
-    private int _nextDaysCount;
+    private int _expiringWeekCount;
     private int _lockedCount;
-    private int _mustChangeNextLogonCount;
+    private int _mustChangeCount;
+    private int _demaisCount;
+    private int _displayedTotal;
 
     public DashboardPage()
     {
@@ -43,23 +48,33 @@ public sealed partial class DashboardPage : Page
     private void DashboardPage_ActualThemeChanged(FrameworkElement sender, object args)
     {
         if (_labels7 is null || _distribution7 is null) return;
-        // Reaplica apenas estilo dos gráficos (sem refazer as consultas).
         RenderCharts();
     }
 
-    private void SetLoading(bool loading, string? statusText = null)
+    private void SetLoading(bool loading)
     {
         LoadingRing.IsActive = loading;
         LoadingRing.Visibility = loading ? Visibility.Visible : Visibility.Collapsed;
-
-        var text = statusText ?? string.Empty;
-        StatusTextBlock.Text = text;
-        StatusTextBlock.Visibility = string.IsNullOrWhiteSpace(text) ? Visibility.Collapsed : Visibility.Visible;
-
+        StatusDot.Visibility = loading ? Visibility.Collapsed : Visibility.Visible;
         AtualizarButton.IsEnabled = !loading;
     }
 
-    private void AtualizarButton_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e) =>
+    private void SetStatus(bool live, string text)
+    {
+        StatusTextBlock.Text = text;
+        var brush = live
+            ? (Brush)Application.Current.Resources["DashboardGreenBrush"]
+            : (Brush)Application.Current.Resources["DashboardMutedBrush"];
+        if (!live && text.StartsWith("Erro", StringComparison.Ordinal))
+            brush = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 220, 38, 38));
+
+        StatusTextBlock.Foreground = brush;
+        StatusDot.Fill = live
+            ? (Brush)Application.Current.Resources["DashboardGreenBrush"]
+            : brush;
+    }
+
+    private void AtualizarButton_Click(object sender, RoutedEventArgs e) =>
         _ = CarregarAsync();
 
     private void ContasBloqueadasCard_Click(object sender, RoutedEventArgs e) =>
@@ -70,7 +85,26 @@ public sealed partial class DashboardPage : Page
             "SenhasExpiradas",
             new SenhasExpiradasNavigationPreset(SenhasExpiradasTipoBuscaPreset.Hoje));
 
-    private void ExpiramEmUmaSemanaCard_Click(object sender, RoutedEventArgs e)
+    private void ExpiramEmUmaSemanaCard_Click(object sender, RoutedEventArgs e) =>
+        AbrirProximosSeteDias();
+
+    private void TrocaProximoLogonCard_Click(object sender, RoutedEventArgs e) =>
+        App.CurrentWindow?.NavigateToMenu(
+            "SenhasExpiradas",
+            new SenhasExpiradasNavigationPreset(SenhasExpiradasTipoBuscaPreset.ProximoLogon));
+
+    private void VerExpiracoes_Click(object sender, RoutedEventArgs e) =>
+        AbrirProximosSeteDias();
+
+    private void VerBloqueadas_Click(object sender, RoutedEventArgs e) =>
+        App.CurrentWindow?.NavigateToMenu("ContasBloqueadas");
+
+    private void VerProximoLogon_Click(object sender, RoutedEventArgs e) =>
+        App.CurrentWindow?.NavigateToMenu(
+            "SenhasExpiradas",
+            new SenhasExpiradasNavigationPreset(SenhasExpiradasTipoBuscaPreset.ProximoLogon));
+
+    private static void AbrirProximosSeteDias()
     {
         var today = DateTime.Today;
         App.CurrentWindow?.NavigateToMenu(
@@ -81,10 +115,11 @@ public sealed partial class DashboardPage : Page
                 new DateTimeOffset(today.AddDays(6))));
     }
 
-    private void TrocaProximoLogonCard_Click(object sender, RoutedEventArgs e) =>
-        App.CurrentWindow?.NavigateToMenu(
-            "SenhasExpiradas",
-            new SenhasExpiradasNavigationPreset(SenhasExpiradasTipoBuscaPreset.ProximoLogon));
+    private void PreviewRow_Tapped(object sender, TappedRoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { Tag: string usuario })
+            Frame.NavigateToLoginWithSam(usuario);
+    }
 
     private async Task CarregarAsync()
     {
@@ -94,7 +129,11 @@ public sealed partial class DashboardPage : Page
 
         try
         {
-            SetLoading(true, "Carregando métricas e gráficos…");
+            SetLoading(true);
+            SetStatus(false, "Consultando o Active Directory…");
+            BindPreview(ExpiringRepeater, ExpiringEmptyText, [], "Consultando…");
+            BindPreview(LockedRepeater, LockedEmptyText, [], "Consultando…");
+            BindPreview(MustChangeRepeater, MustChangeEmptyText, [], "Consultando…");
 
             var today = DateTime.Today;
             await LdapDirectory.RefreshPasswordPolicyAsync(ct);
@@ -107,23 +146,58 @@ public sealed partial class DashboardPage : Page
                 ct);
             var mustChangeNextLogonTask =
                 ActiveDirectorySearchService.GetMustChangePasswordAtNextLogonAsync(ct);
+            var totalTask = ActiveDirectorySearchService.CountActiveUsersAsync(ct);
 
             await Task.WhenAll(lockedTask, expiringWeekTask, mustChangeNextLogonTask);
 
             var locked = await lockedTask;
             var expiringInWeek = await expiringWeekTask;
             var mustChange = await mustChangeNextLogonTask;
-            var expiringTodayCount = expiringInWeek.Items.Count(x => x.Expira.Date == today);
+            if (ct.IsCancellationRequested) return;
 
+            int? totalActive = null;
+            try
+            {
+                totalActive = await totalTask;
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch
+            {
+                totalActive = null;
+            }
+
+            var expiringToday = expiringInWeek.Items.Where(x => x.Expira.Date == today).ToList();
             _lockedCount = locked.Items.Count;
-            _expiringTodayCount = expiringTodayCount;
-            _nextDaysCount = expiringInWeek.Items.Count - expiringTodayCount;
-            _mustChangeNextLogonCount = mustChange.Items.Count;
+            _expiringTodayCount = expiringToday.Count;
+            _expiringWeekCount = expiringInWeek.Items.Count;
+            _mustChangeCount = mustChange.Items.Count;
 
-            KpiLockedCountTextBlock.Text = _lockedCount.ToString();
-            KpiExpireTodayCountTextBlock.Text = expiringTodayCount.ToString();
-            KpiExpireInWeekCountTextBlock.Text = expiringInWeek.Items.Count.ToString();
-            KpiMustChangeNextLogonCountTextBlock.Text = _mustChangeNextLogonCount.ToString();
+            if (totalActive is int total)
+            {
+                _demaisCount = Math.Max(
+                    0,
+                    total - _lockedCount - _expiringTodayCount - _expiringWeekCount - _mustChangeCount);
+            }
+            else
+            {
+                _demaisCount = 0;
+            }
+
+            _displayedTotal = _lockedCount + _expiringTodayCount + _expiringWeekCount + _mustChangeCount + _demaisCount;
+
+            KpiLockedCountTextBlock.Text = _lockedCount.ToString(PtBr);
+            KpiExpireTodayCountTextBlock.Text = _expiringTodayCount.ToString(PtBr);
+            KpiExpireInWeekCountTextBlock.Text = _expiringWeekCount.ToString(PtBr);
+            KpiMustChangeNextLogonCountTextBlock.Text = _mustChangeCount.ToString(PtBr);
+            LegendLockedText.Text = _lockedCount.ToString("N0", PtBr);
+            LegendTodayText.Text = _expiringTodayCount.ToString("N0", PtBr);
+            LegendWeekText.Text = _expiringWeekCount.ToString("N0", PtBr);
+            LegendMustChangeText.Text = _mustChangeCount.ToString("N0", PtBr);
+            LegendOtherText.Text = totalActive is null ? "—" : _demaisCount.ToString("N0", PtBr);
+            TotalContasText.Text = _displayedTotal.ToString("N0", PtBr);
 
             var byDay = expiringInWeek.Items
                 .GroupBy(x => x.Expira.Date)
@@ -131,28 +205,34 @@ public sealed partial class DashboardPage : Page
 
             var labels7 = new string[7];
             var distribution7 = new int[7];
-            var culture = new CultureInfo("pt-BR");
-            var abbreviatedDayNames = culture.DateTimeFormat.AbbreviatedDayNames;
             for (var i = 0; i < 7; i++)
             {
                 var date = today.AddDays(i).Date;
-                var dayIndex = (int)date.DayOfWeek;
-                var dayName = (dayIndex >= 0 && dayIndex < abbreviatedDayNames.Length)
-                    ? abbreviatedDayNames[dayIndex]
-                    : date.ToString("ddd", culture);
-
-                labels7[i] = i == 0
-                    ? "Hoje"
-                    : dayName;
+                labels7[i] = i == 0 ? "Hoje" : RotuloDia(date);
                 distribution7[i] = byDay.TryGetValue(date, out var cnt) ? cnt : 0;
             }
 
             _labels7 = labels7;
             _distribution7 = distribution7;
-
             RenderCharts();
 
-            var status = $"Atualizado: {DateTime.Now:dd/MM/yyyy HH:mm}. Política de senha: {policy.Describe()}.";
+            BindPreview(
+                ExpiringRepeater,
+                ExpiringEmptyText,
+                expiringInWeek.Items.Take(PreviewCount).Select(item => ExpiryRow(item, today)).ToList(),
+                "Nenhuma conta expira nos próximos 7 dias.");
+            BindPreview(
+                LockedRepeater,
+                LockedEmptyText,
+                locked.Items.Take(PreviewCount).Select(LockedRow).ToList(),
+                "Nenhuma conta bloqueada agora.");
+            BindPreview(
+                MustChangeRepeater,
+                MustChangeEmptyText,
+                mustChange.Items.Take(PreviewCount).Select(MustChangeRow).ToList(),
+                "Nenhuma conta precisa trocar a senha no próximo logon.");
+
+            var status = "Dados obtidos diretamente do Active Directory (LDAP) no momento da consulta.";
             var avisos = new List<string>();
             if (locked.Truncated)
                 avisos.Add($"bloqueadas no limite de {locked.Limit}");
@@ -161,9 +241,13 @@ public sealed partial class DashboardPage : Page
             if (mustChange.Truncated)
                 avisos.Add($"troca no logon no limite de {mustChange.Limit}");
             if (avisos.Count > 0)
-                status += " Busca parcial: " + string.Join("; ", avisos) + ".";
+                status = "Consulta parcial: " + string.Join("; ", avisos) + ".";
 
-            SetLoading(false, status);
+            UltimaConsultaText.Text = DateTime.Now.ToString("dd/MM/yyyy HH:mm", PtBr);
+            ToolTipService.SetToolTip(StatusTextBlock, $"Política de senha: {policy.Describe()}");
+            SetStatus(avisos.Count == 0, status);
+            SetLoading(false);
+            App.CurrentWindow?.SetDirectoryConnection(true);
         }
         catch (OperationCanceledException)
         {
@@ -171,8 +255,101 @@ public sealed partial class DashboardPage : Page
         }
         catch (Exception ex)
         {
-            SetLoading(false, $"Erro ao carregar dashboard: {ex.Message}");
+            SetLoading(false);
+            SetStatus(false, $"Erro ao carregar dashboard: {ex.Message}");
+            App.CurrentWindow?.SetDirectoryConnection(false);
         }
+    }
+
+    private static void BindPreview(
+        ItemsRepeater repeater,
+        TextBlock empty,
+        IReadOnlyList<DashboardPreviewRow> rows,
+        string emptyMessage)
+    {
+        repeater.ItemsSource = rows;
+        empty.Text = emptyMessage;
+        empty.Visibility = rows.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private static string RotuloDia(DateTime date)
+    {
+        var raw = PtBr.DateTimeFormat.GetAbbreviatedDayName(date.DayOfWeek).Trim().TrimEnd('.');
+        if (raw.Length == 0)
+            return "—";
+
+        return char.ToUpper(raw[0], PtBr) + raw[1..] + ".";
+    }
+
+    private static DashboardPreviewRow ExpiryRow(SenhaExpiraItem item, DateTime today)
+    {
+        var days = Math.Max(0, (item.Expira.Date - today).Days);
+        var (text, background, foreground) = days switch
+        {
+            0 => ("Hoje", "#FEE2E2", "#DC2626"),
+            1 => ("1 dia", "#FFEDD5", "#C2410C"),
+            <= 3 => ($"{days} dias", "#FEF3C7", "#B45309"),
+            _ => ($"{days} dias", "#FEF9C3", "#A16207")
+        };
+
+        return Pessoa(item.SamAccountName, item.DisplayName, text, background, foreground, badge: true);
+    }
+
+    private static DashboardPreviewRow LockedRow(SearchResultItem item) =>
+        Pessoa(
+            item.SamAccountName,
+            item.DisplayName,
+            string.IsNullOrWhiteSpace(item.LockoutTime) ? "—" : item.LockoutTime,
+            "#00000000",
+            "#64748B",
+            badge: false);
+
+    private static DashboardPreviewRow MustChangeRow(SearchResultItem item) =>
+        Pessoa(
+            item.SamAccountName,
+            item.DisplayName,
+            "Troca no próximo logon",
+            "#DCFCE7",
+            "#15803D",
+            badge: true);
+
+    private static DashboardPreviewRow Pessoa(
+        string usuario,
+        string nome,
+        string detalhe,
+        string background,
+        string foreground,
+        bool badge) =>
+        new()
+        {
+            Usuario = usuario,
+            Nome = string.IsNullOrWhiteSpace(nome) ? "—" : nome,
+            Detalhe = detalhe,
+            BadgeBackground = Hex(background),
+            BadgeForeground = Hex(foreground),
+            BadgeVisibility = badge ? Visibility.Visible : Visibility.Collapsed,
+            TextoVisibility = badge ? Visibility.Collapsed : Visibility.Visible
+        };
+
+    private static SolidColorBrush Hex(string hex)
+    {
+        var value = Convert.ToUInt32(hex.TrimStart('#'), 16);
+        byte a = 255, r, g, b;
+        if (hex.TrimStart('#').Length > 6)
+        {
+            a = (byte)((value >> 24) & 0xFF);
+            r = (byte)((value >> 16) & 0xFF);
+            g = (byte)((value >> 8) & 0xFF);
+            b = (byte)(value & 0xFF);
+        }
+        else
+        {
+            r = (byte)((value >> 16) & 0xFF);
+            g = (byte)((value >> 8) & 0xFF);
+            b = (byte)(value & 0xFF);
+        }
+
+        return new SolidColorBrush(Windows.UI.Color.FromArgb(a, r, g, b));
     }
 
     private static SKColor TryGetThemeColor(string resourceKey, SKColor fallback)
@@ -191,9 +368,7 @@ public sealed partial class DashboardPage : Page
     {
         if (_labels7 is null || _distribution7 is null) return;
 
-        var theme = ActualTheme;
-        var isDark = theme == ElementTheme.Dark;
-
+        var isDark = ActualTheme == ElementTheme.Dark;
         LiveCharts.Configure(config =>
         {
             if (isDark)
@@ -203,87 +378,98 @@ public sealed partial class DashboardPage : Page
         });
 
         var axisLabelsColor = TryGetThemeColor(
-            "TextFillColorSecondaryBrush",
-            isDark ? new SKColor(170, 170, 170) : new SKColor(90, 90, 90));
-
-        var dataLabelsColor = TryGetThemeColor(
-            "TextFillColorSecondaryBrush",
-            axisLabelsColor);
-
-        var accentFill = TryGetThemeColor(
-            "AccentFillColorDefaultBrush",
-            isDark ? new SKColor(79, 156, 255) : new SKColor(0, 120, 215));
+            "DashboardMutedBrush",
+            isDark ? new SKColor(148, 163, 184) : new SKColor(100, 116, 139));
+        var labelColor = TryGetThemeColor(
+            "DashboardTitleBrush",
+            isDark ? new SKColor(248, 250, 252) : new SKColor(15, 23, 42));
+        var gridColor = isDark
+            ? new SKColor(51, 65, 85, 160)
+            : new SKColor(226, 232, 240, 220);
+        var barColor = TryGetThemeColor(
+            "DashboardBlueBrush",
+            new SKColor(37, 99, 235));
 
         var axisLabelsPaint = new SolidColorPaint(axisLabelsColor);
-        var dataLabelsPaint = new SolidColorPaint(dataLabelsColor);
-        var fillAlpha = (byte)(accentFill.Alpha * 0.85f);
-        var accentFillWithAlpha = new SKColor(accentFill.Red, accentFill.Green, accentFill.Blue, fillAlpha);
-        var fillPaint = new SolidColorPaint(accentFillWithAlpha);
+        var dataLabelsPaint = new SolidColorPaint(labelColor);
+        var gridPaint = new SolidColorPaint(gridColor) { StrokeThickness = 1 };
+        var fillPaint = new SolidColorPaint(barColor);
 
-        // Gráfico 1: distribuição diária (hoje até +6).
+        var max = _distribution7.Length == 0 ? 0 : _distribution7.Max();
+        var yMax = Math.Max(4, max + 1);
+
         var expiracoesPorDiaSeries = new ColumnSeries<int>
         {
             Name = "Expirações",
             Values = _distribution7,
             Fill = fillPaint,
             Stroke = null,
-            // Removemos data labels para evitar sobreposição em telas menores.
-            DataLabelsPaint = null
+            MaxBarWidth = 42,
+            Rx = 4,
+            Ry = 4,
+            DataLabelsPaint = dataLabelsPaint,
+            DataLabelsSize = 12,
+            DataLabelsPosition = DataLabelsPosition.Top,
+            DataLabelsFormatter = point => point.Coordinate.PrimaryValue.ToString("0", CultureInfo.InvariantCulture)
         };
         expiracoesPorDiaSeries.ChartPointPointerDown += ExpiracoesPorDiaSeries_ChartPointPointerDown;
 
-        ExpiracoesPorDiaChart.Series = new ISeries[]
-        {
-            expiracoesPorDiaSeries
-        };
-
+        ExpiracoesPorDiaChart.Series = new ISeries[] { expiracoesPorDiaSeries };
         ExpiracoesPorDiaChart.XAxes = new Axis[]
         {
-            new Axis
+            new()
             {
                 Labels = _labels7,
-                LabelsPaint = axisLabelsPaint
+                LabelsPaint = axisLabelsPaint,
+                SeparatorsPaint = null,
+                TextSize = 12
             }
         };
         ExpiracoesPorDiaChart.YAxes = new Axis[]
         {
-            new Axis
+            new()
             {
-                Labeler = v => v.ToString("0"),
-                LabelsPaint = axisLabelsPaint
+                MinLimit = 0,
+                MaxLimit = yMax,
+                MinStep = 1,
+                Labeler = v =>
+                {
+                    var rounded = Math.Round(v);
+                    return Math.Abs(v - rounded) < 0.01
+                        ? rounded.ToString("0", CultureInfo.InvariantCulture)
+                        : string.Empty;
+                },
+                LabelsPaint = axisLabelsPaint,
+                SeparatorsPaint = gridPaint,
+                TextSize = 12
             }
         };
 
-        // Gráfico 2: Hoje vs Próximos dias (dentro da mesma janela de 7 dias).
-        ExpireHojeVsProximosChart.Series = new ISeries[]
-        {
-            new ColumnSeries<int>
-            {
-                Name = "Expirações",
-                Values = new[] { _expiringTodayCount, _nextDaysCount },
-                Fill = fillPaint,
-                Stroke = null,
-                // Removemos data labels para manter o layout limpo.
-                DataLabelsPaint = null
-            }
-        };
+        var hole = isDark ? new SKColor(17, 24, 39) : SKColors.White;
+        var slices = new List<ISeries>();
+        AddSlice(slices, "Contas bloqueadas", _lockedCount, new SKColor(37, 99, 235), hole);
+        AddSlice(slices, "Expiram hoje", _expiringTodayCount, new SKColor(249, 115, 22), hole);
+        AddSlice(slices, "Expiram nos próximos 7 dias", _expiringWeekCount, new SKColor(124, 58, 237), hole);
+        AddSlice(slices, "Troca no próximo logon", _mustChangeCount, new SKColor(22, 163, 74), hole);
+        AddSlice(slices, "Demais contas", _demaisCount, new SKColor(203, 213, 225), hole);
+        StatusPieChart.Series = slices;
+        StatusPieChart.InitialRotation = -90;
+    }
 
-        ExpireHojeVsProximosChart.XAxes = new Axis[]
+    private static void AddSlice(List<ISeries> slices, string name, int value, SKColor color, SKColor hole)
+    {
+        if (value <= 0) return;
+
+        slices.Add(new PieSeries<int>
         {
-            new Axis
-            {
-                Labels = new[] { "Hoje", "Próximos dias" },
-                LabelsPaint = axisLabelsPaint
-            }
-        };
-        ExpireHojeVsProximosChart.YAxes = new Axis[]
-        {
-            new Axis
-            {
-                Labeler = v => v.ToString("0"),
-                LabelsPaint = axisLabelsPaint
-            }
-        };
+            Name = name,
+            Values = new[] { value },
+            Fill = new SolidColorPaint(color),
+            Stroke = new SolidColorPaint(hole) { StrokeThickness = 3 },
+            InnerRadius = 62,
+            DataLabelsPaint = null,
+            HoverPushout = 6
+        });
     }
 
     private void ExpiracoesPorDiaSeries_ChartPointPointerDown(
@@ -292,12 +478,10 @@ public sealed partial class DashboardPage : Page
     {
         if (point is null) return;
 
-        // No gráfico diário, o índice 0..6 corresponde a hoje..+6.
         var idx = point.Index;
         if (idx < 0 || idx > 6) return;
 
         var data = DateTime.Today.AddDays(idx).Date;
-
         App.CurrentWindow?.NavigateToMenu(
             "SenhasExpiradas",
             new SenhasExpiradasNavigationPreset(
@@ -305,4 +489,3 @@ public sealed partial class DashboardPage : Page
                 new DateTimeOffset(data)));
     }
 }
-

@@ -5,6 +5,44 @@
 
     <Application.Resources>
         <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="DashboardCanvasBrush" Color="#F4F7FB"/>
+                    <SolidColorBrush x:Key="DashboardCardBrush" Color="#FFFFFF"/>
+                    <SolidColorBrush x:Key="DashboardCardStrokeBrush" Color="#E6EBF2"/>
+                    <SolidColorBrush x:Key="DashboardMutedBrush" Color="#64748B"/>
+                    <SolidColorBrush x:Key="DashboardTitleBrush" Color="#0F172A"/>
+                    <SolidColorBrush x:Key="DashboardBlueBrush" Color="#2563EB"/>
+                    <SolidColorBrush x:Key="DashboardBlueSoftBrush" Color="#EFF6FF"/>
+                    <SolidColorBrush x:Key="DashboardOrangeBrush" Color="#F97316"/>
+                    <SolidColorBrush x:Key="DashboardOrangeSoftBrush" Color="#FFF7ED"/>
+                    <SolidColorBrush x:Key="DashboardPurpleBrush" Color="#7C3AED"/>
+                    <SolidColorBrush x:Key="DashboardPurpleSoftBrush" Color="#F5F3FF"/>
+                    <SolidColorBrush x:Key="DashboardGreenBrush" Color="#16A34A"/>
+                    <SolidColorBrush x:Key="DashboardGreenSoftBrush" Color="#F0FDF4"/>
+                    <SolidColorBrush x:Key="DashboardBadgeGrayBrush" Color="#F1F5F9"/>
+                    <SolidColorBrush x:Key="DashboardRowStrokeBrush" Color="#EEF2F6"/>
+                    <SolidColorBrush x:Key="DashboardLinkBrush" Color="#2563EB"/>
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Dark">
+                    <SolidColorBrush x:Key="DashboardCanvasBrush" Color="#0B1220"/>
+                    <SolidColorBrush x:Key="DashboardCardBrush" Color="#111827"/>
+                    <SolidColorBrush x:Key="DashboardCardStrokeBrush" Color="#1F2937"/>
+                    <SolidColorBrush x:Key="DashboardMutedBrush" Color="#94A3B8"/>
+                    <SolidColorBrush x:Key="DashboardTitleBrush" Color="#F8FAFC"/>
+                    <SolidColorBrush x:Key="DashboardBlueBrush" Color="#60A5FA"/>
+                    <SolidColorBrush x:Key="DashboardBlueSoftBrush" Color="#172554"/>
+                    <SolidColorBrush x:Key="DashboardOrangeBrush" Color="#FB923C"/>
+                    <SolidColorBrush x:Key="DashboardOrangeSoftBrush" Color="#431407"/>
+                    <SolidColorBrush x:Key="DashboardPurpleBrush" Color="#A78BFA"/>
+                    <SolidColorBrush x:Key="DashboardPurpleSoftBrush" Color="#2E1065"/>
+                    <SolidColorBrush x:Key="DashboardGreenBrush" Color="#4ADE80"/>
+                    <SolidColorBrush x:Key="DashboardGreenSoftBrush" Color="#052E16"/>
+                    <SolidColorBrush x:Key="DashboardBadgeGrayBrush" Color="#1E293B"/>
+                    <SolidColorBrush x:Key="DashboardRowStrokeBrush" Color="#1F2937"/>
+                    <SolidColorBrush x:Key="DashboardLinkBrush" Color="#60A5FA"/>
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
             <ResourceDictionary.MergedDictionaries>
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls"/>
             </ResourceDictionary.MergedDictionaries>

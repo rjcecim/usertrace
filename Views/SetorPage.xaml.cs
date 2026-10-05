@@ -1,6 +1,7 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Navigation;
 using UserTrace.Helpers;
 using UserTrace.Models;
 using UserTrace.Services;
@@ -18,12 +19,24 @@ public sealed partial class SetorPage : Page
     private CancellationTokenSource? _ctsDetalhes;
     private List<SearchResultItem> _usuariosDoSetor = [];
     private string _setorAtual = string.Empty;
+    private bool _setoresProntos;
 
     public SetorPage()
     {
         InitializeComponent();
         DetalhesPanel.ShowEmpty("Selecione um usuário para ver os detalhes.");
         Loaded += (_, _) => _ = CarregarSetoresAsync();
+    }
+
+    protected override void OnNavigatedTo(NavigationEventArgs e)
+    {
+        base.OnNavigatedTo(e);
+        if (e.Parameter is not string filtro || string.IsNullOrWhiteSpace(filtro))
+            return;
+
+        FiltroSetorTextBox.Text = filtro.Trim();
+        if (_setoresProntos)
+            AplicarFiltroSetores();
     }
 
     private void FiltrarButton_Click(object sender, RoutedEventArgs e) => AplicarFiltroSetores();
@@ -64,6 +77,7 @@ public sealed partial class SetorPage : Page
             _todosSetores = [SetorSemOffice, .. setores.Items];
             _setoresTruncados = setores.Truncated;
             _setoresLimite = setores.Limit;
+            _setoresProntos = true;
             AplicarFiltroSetores();
         }
         catch (OperationCanceledException)

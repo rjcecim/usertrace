@@ -23,6 +23,37 @@ public static class ActiveDirectorySearchService
         CancellationToken cancellationToken = default) =>
         Task.Run(() => SearchByNameCore(term, cancellationToken), cancellationToken);
 
+    public static Task<QueryResult<SearchResultItem>> SearchByNameLimitedAsync(
+        string term,
+        int limit,
+        CancellationToken cancellationToken = default) =>
+        Task.Run(() => SearchByNameCore(term, cancellationToken, limit), cancellationToken);
+
+    public static Task<int> CountActiveUsersAsync(CancellationToken cancellationToken = default) =>
+        Task.Run(
+            () => LdapDirectory.Count($"(&{LdapDirectory.Person}{LdapDirectory.ActiveAccount})", cancellationToken),
+            cancellationToken);
+
+    public static async Task<IReadOnlyList<GlobalSearchHit>> SearchGlobalAsync(
+        string term,
+        CancellationToken cancellationToken = default)
+    {
+        var trimmed = term.Trim();
+        if (trimmed.Length < 2)
+            return [];
+
+        var usersTask = SafeUsersAsync(trimmed, cancellationToken);
+        var groupsTask = SafeGroupsAsync(trimmed, cancellationToken);
+        var officesTask = SafeOfficesAsync(trimmed, cancellationToken);
+        await Task.WhenAll(usersTask, groupsTask, officesTask);
+
+        var hits = new List<GlobalSearchHit>(16);
+        hits.AddRange(await usersTask);
+        hits.AddRange(await groupsTask);
+        hits.AddRange(await officesTask);
+        return hits;
+    }
+
     public static Task<QueryResult<SenhaExpiraItem>> GetPasswordExpiringInRangeAsync(
         DateTime dataInicio,
         DateTime dataFim,
@@ -59,7 +90,10 @@ public static class ActiveDirectorySearchService
         return Task.Run(() => SearchUsers(filter, cancellationToken), cancellationToken);
     }
 
-    private static QueryResult<SearchResultItem> SearchByNameCore(string term, CancellationToken ct)
+    private static QueryResult<SearchResultItem> SearchByNameCore(
+        string term,
+        CancellationToken ct,
+        int limit = SearchLimits.Safety)
     {
         var escaped = LdapFilter.Escape(term);
         var filter =
@@ -70,7 +104,108 @@ public static class ActiveDirectorySearchService
             $"(sn=*{escaped}*)" +
             $"(sAMAccountName=*{escaped}*)))";
 
-        return SearchUsers(filter, ct, SearchLimits.Safety);
+        return SearchUsers(filter, ct, limit);
+    }
+
+    private static async Task<IReadOnlyList<GlobalSearchHit>> SafeUsersAsync(string term, CancellationToken ct)
+    {
+        try
+        {
+            var users = await SearchByNameLimitedAsync(term, 6, ct);
+            return users.Items.Select(user =>
+            {
+                var nome = string.IsNullOrWhiteSpace(user.DisplayName) ? user.SamAccountName : user.DisplayName;
+                var subtitulo = string.Equals(nome, user.SamAccountName, StringComparison.OrdinalIgnoreCase)
+                    ? "Usuário"
+                    : user.SamAccountName;
+                return new GlobalSearchHit
+                {
+                    Kind = "Usuário",
+                    Title = nome,
+                    Subtitle = subtitulo,
+                    MenuTag = "Login",
+                    Value = user.SamAccountName
+                };
+            }).ToList();
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch
+        {
+            return [];
+        }
+    }
+
+    private static async Task<IReadOnlyList<GlobalSearchHit>> SafeGroupsAsync(string term, CancellationToken ct)
+    {
+        try
+        {
+            var groups = await GroupService.SearchGroupsLimitedAsync(term, 5, ct);
+            return groups.Items.Select(group => new GlobalSearchHit
+            {
+                Kind = "Grupo",
+                Title = group.Name,
+                Subtitle = string.IsNullOrWhiteSpace(group.Description) ? group.GroupType : group.Description,
+                MenuTag = "Grupo",
+                Value = group.Name
+            }).ToList();
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch
+        {
+            return [];
+        }
+    }
+
+    private static async Task<IReadOnlyList<GlobalSearchHit>> SafeOfficesAsync(string term, CancellationToken ct)
+    {
+        try
+        {
+            var offices = await Task.Run(() => SearchOfficesCore(term, 5, ct), ct);
+            return offices.Select(office => new GlobalSearchHit
+            {
+                Kind = "Setor",
+                Title = office,
+                Subtitle = "physicalDeliveryOfficeName",
+                MenuTag = "Setor",
+                Value = office
+            }).ToList();
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch
+        {
+            return [];
+        }
+    }
+
+    private static IReadOnlyList<string> SearchOfficesCore(string term, int limit, CancellationToken ct)
+    {
+        var escaped = LdapFilter.Escape(term);
+        var filter =
+            $"(&{LdapDirectory.Person}{LdapDirectory.ActiveAccount}(physicalDeliveryOfficeName=*{escaped}*))";
+        var result = LdapDirectory.Query(
+            filter,
+            ["physicalDeliveryOfficeName"],
+            250,
+            sr =>
+            {
+                var office = LdapDirectory.ReadString(sr, "physicalDeliveryOfficeName").Trim();
+                return string.IsNullOrWhiteSpace(office) ? null : office;
+            },
+            ct);
+
+        return result.Items
+            .Distinct(StringComparer.CurrentCultureIgnoreCase)
+            .Take(limit)
+            .ToList();
     }
 
     private static QueryResult<string> GetAllOfficesCore(CancellationToken ct)

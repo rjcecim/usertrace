@@ -1,6 +1,7 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Navigation;
 using UserTrace.Helpers;
 using UserTrace.Models;
 using UserTrace.Services;
@@ -16,12 +17,28 @@ public sealed partial class GrupoPage : Page
     private List<DomainGroupItem> _grupos = [];
     private List<SearchResultItem> _membros = [];
     private string _grupoSelecionado = string.Empty;
+    private bool _loaded;
 
     public GrupoPage()
     {
         InitializeComponent();
         DetalhesPanel.ShowEmpty("Selecione um membro para ver os detalhes.");
-        Loaded += (_, _) => _ = ListarGruposAsync();
+        Loaded += (_, _) =>
+        {
+            _loaded = true;
+            _ = ListarGruposAsync();
+        };
+    }
+
+    protected override void OnNavigatedTo(NavigationEventArgs e)
+    {
+        base.OnNavigatedTo(e);
+        if (e.Parameter is not string filtro || string.IsNullOrWhiteSpace(filtro))
+            return;
+
+        FiltroTextBox.Text = filtro.Trim();
+        if (_loaded)
+            _ = ListarGruposAsync();
     }
 
     // ── Eventos de UI ────────────────────────────────────────────────────────

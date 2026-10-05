@@ -130,6 +130,71 @@ public static class LdapDirectory
         };
     }
 
+    public static int Count(string filter, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        using var root = OpenRoot();
+        using var searcher = new DirectorySearcher(root)
+        {
+            Filter = filter,
+            SearchScope = SearchScope.Subtree,
+            PageSize = 1000,
+            SizeLimit = 0
+        };
+        searcher.PropertiesToLoad.Add("objectGuid");
+
+        try
+        {
+            using var found = searcher.FindAll();
+            var count = 0;
+            foreach (SearchResult _ in found)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                count++;
+                if (count >= SearchLimits.Safety)
+                    break;
+            }
+
+            return count;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException(
+                $"Falha ao consultar o Active Directory: {ex.Message}", ex);
+        }
+    }
+
+    public static void Probe()
+    {
+        using var root = OpenRoot();
+        using var searcher = new DirectorySearcher(root)
+        {
+            Filter = "(objectClass=domainDNS)",
+            SearchScope = SearchScope.Base
+        };
+        searcher.PropertiesToLoad.Add("distinguishedName");
+
+        try
+        {
+            if (searcher.FindOne() is null)
+                throw new InvalidOperationException("O domínio do Active Directory não respondeu.");
+        }
+        catch (InvalidOperationException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException(
+                $"Falha ao consultar o Active Directory: {ex.Message}", ex);
+        }
+    }
+
     public static string ReadString(SearchResult result, string name)
     {
         var props = result.Properties[name];

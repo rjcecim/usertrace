@@ -3,10 +3,81 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:lvc="using:LiveChartsCore.SkiaSharpView.WinUI"
-    Background="Transparent">
+    xmlns:models="using:UserTrace.Models"
+    Background="{ThemeResource DashboardCanvasBrush}">
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto" ZoomMode="Disabled">
-        <Grid Margin="32,28,32,24" RowSpacing="16">
+    <Page.Resources>
+        <Style x:Key="DashboardKpiButtonStyle" TargetType="Button" BasedOn="{StaticResource MicaCardButtonStyle}">
+            <Setter Property="Background" Value="{ThemeResource DashboardCardBrush}"/>
+            <Setter Property="BorderBrush" Value="{ThemeResource DashboardCardStrokeBrush}"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="16,14"/>
+            <Setter Property="MinHeight" Value="132"/>
+        </Style>
+
+        <Style x:Key="DashboardCardStyle" TargetType="Border" BasedOn="{StaticResource MicaCardStyle}">
+            <Setter Property="Background" Value="{ThemeResource DashboardCardBrush}"/>
+            <Setter Property="BorderBrush" Value="{ThemeResource DashboardCardStrokeBrush}"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="16,14"/>
+        </Style>
+
+        <DataTemplate x:Key="PreviewRowTemplate" x:DataType="models:DashboardPreviewRow">
+            <Border
+                Background="Transparent"
+                BorderBrush="{ThemeResource DashboardRowStrokeBrush}"
+                BorderThickness="0,0,0,1"
+                Tapped="PreviewRow_Tapped"
+                Tag="{x:Bind Usuario}"
+                Padding="2,0">
+                <Grid Height="36" ColumnSpacing="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="124"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock
+                        Text="{x:Bind Usuario}"
+                        FontSize="13"
+                        VerticalAlignment="Center"
+                        TextTrimming="CharacterEllipsis"
+                        Foreground="{ThemeResource DashboardTitleBrush}"/>
+                    <TextBlock
+                        Grid.Column="1"
+                        Text="{x:Bind Nome}"
+                        FontSize="13"
+                        VerticalAlignment="Center"
+                        TextTrimming="CharacterEllipsis"
+                        Foreground="{ThemeResource DashboardTitleBrush}"/>
+                    <Border
+                        Grid.Column="2"
+                        Background="{x:Bind BadgeBackground}"
+                        CornerRadius="10"
+                        Padding="8,2"
+                        VerticalAlignment="Center"
+                        HorizontalAlignment="Right"
+                        Visibility="{x:Bind BadgeVisibility}">
+                        <TextBlock
+                            Text="{x:Bind Detalhe}"
+                            Foreground="{x:Bind BadgeForeground}"
+                            FontSize="12"
+                            FontWeight="SemiBold"/>
+                    </Border>
+                    <TextBlock
+                        Grid.Column="2"
+                        Text="{x:Bind Detalhe}"
+                        Visibility="{x:Bind TextoVisibility}"
+                        FontSize="12"
+                        VerticalAlignment="Center"
+                        HorizontalAlignment="Right"
+                        Foreground="{ThemeResource DashboardMutedBrush}"/>
+                </Grid>
+            </Border>
+        </DataTemplate>
+    </Page.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <Grid Margin="20,8,20,20" RowSpacing="14">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
@@ -14,329 +85,541 @@
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <!-- Cabeçalho -->
-            <StackPanel Grid.Row="0" Spacing="2">
-                <StackPanel Orientation="Horizontal" Spacing="10">
-                    <FontIcon
-                        Glyph="&#xE9D2;"
-                        FontSize="22"
-                        Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
-                        VerticalAlignment="Center"/>
+            <Grid Grid.Row="0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Spacing="2">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <FontIcon
+                            Glyph="&#xE9D2;"
+                            FontSize="22"
+                            Foreground="{ThemeResource DashboardBlueBrush}"
+                            VerticalAlignment="Center"/>
+                        <TextBlock
+                            Text="Dashboard"
+                            Style="{StaticResource TitleTextBlockStyle}"
+                            Foreground="{ThemeResource DashboardTitleBrush}"
+                            VerticalAlignment="Center"/>
+                    </StackPanel>
                     <TextBlock
-                        Text="Dashboard"
-                        Style="{StaticResource TitleTextBlockStyle}"
-                        VerticalAlignment="Center"/>
-                </StackPanel>
-
-                <TextBlock
-                    Text="Visão geral das contas do Active Directory (bloqueios e expirações)."
-                    Style="{StaticResource PageDescriptionStyle}"/>
-
-                <Grid Margin="0,8,0,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-
-                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
+                        Text="Consulta em tempo real das informações do Active Directory"
+                        FontSize="13"
+                        Foreground="{ThemeResource DashboardMutedBrush}"
+                        Margin="32,0,0,0"/>
+                    <StackPanel Orientation="Horizontal" Spacing="8" Margin="32,8,0,0">
                         <ProgressRing
                             x:Name="LoadingRing"
-                            Width="20"
-                            Height="20"
+                            Width="14"
+                            Height="14"
                             IsActive="False"
                             Visibility="Collapsed"/>
+                        <Ellipse
+                            x:Name="StatusDot"
+                            Width="8"
+                            Height="8"
+                            VerticalAlignment="Center"
+                            Fill="{ThemeResource DashboardGreenBrush}"/>
                         <TextBlock
                             x:Name="StatusTextBlock"
-                            Text=""
-                            Style="{StaticResource StatusCaptionStyle}"
-                            Visibility="Collapsed"/>
+                            Text="Consultando o Active Directory…"
+                            FontSize="12"
+                            Foreground="{ThemeResource DashboardMutedBrush}"
+                            TextWrapping="Wrap"
+                            VerticalAlignment="Center"/>
                     </StackPanel>
+                </StackPanel>
 
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
+                    <StackPanel VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Right">
+                            <FontIcon
+                                Glyph="&#xE823;"
+                                FontSize="14"
+                                Foreground="{ThemeResource DashboardMutedBrush}"
+                                VerticalAlignment="Center"/>
+                            <TextBlock
+                                Text="Última consulta"
+                                FontSize="12"
+                                Foreground="{ThemeResource DashboardMutedBrush}"
+                                VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <TextBlock
+                            x:Name="UltimaConsultaText"
+                            Text="—"
+                            FontSize="14"
+                            FontWeight="SemiBold"
+                            HorizontalAlignment="Right"
+                            Foreground="{ThemeResource DashboardTitleBrush}"/>
+                        <TextBlock
+                            Text="Os dados refletem o estado atual do Active Directory."
+                            FontSize="11"
+                            Foreground="{ThemeResource DashboardMutedBrush}"
+                            HorizontalAlignment="Right"
+                            TextAlignment="Right"
+                            MaxWidth="280"
+                            TextWrapping="Wrap"/>
+                    </StackPanel>
                     <Button
                         x:Name="AtualizarButton"
-                        Grid.Column="1"
-                        Style="{StaticResource AccentButtonStyle}"
                         Click="AtualizarButton_Click"
-                        MinWidth="110">
+                        Style="{StaticResource AccentButtonStyle}"
+                        CornerRadius="8"
+                        Padding="16,8"
+                        VerticalAlignment="Center">
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <FontIcon Glyph="&#xE72C;" FontSize="14" VerticalAlignment="Center"/>
                             <TextBlock Text="Atualizar" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
-                </Grid>
-            </StackPanel>
+                </StackPanel>
+            </Grid>
 
-            <!-- KPIs -->
-            <Grid Grid.Row="1" ColumnSpacing="16" RowSpacing="16">
+            <Grid Grid.Row="1" ColumnSpacing="12">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
 
-                <!-- Contas Bloqueadas -->
-                <Button
-                    Grid.Row="0"
-                    Grid.Column="0"
-                    Style="{StaticResource MicaCardButtonStyle}"
-                    Click="ContasBloqueadasCard_Click">
-                    <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="6">
-                        <StackPanel
-                            Grid.Row="0"
-                            Orientation="Horizontal"
-                            Spacing="8"
-                            VerticalAlignment="Center">
-                            <FontIcon
-                                Glyph="&#xE72E;"
-                                FontSize="14"
-                                Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
-                                VerticalAlignment="Center"/>
-                            <TextBlock
-                                Text="Contas Bloqueadas"
-                                Style="{StaticResource BodyStrongTextBlockStyle}"
-                                TextWrapping="Wrap"
-                                MaxLines="2"
-                                TextTrimming="WordEllipsis"/>
+                <Button Grid.Column="0" Style="{StaticResource DashboardKpiButtonStyle}" Click="ContasBloqueadasCard_Click" ToolTipService.ToolTip="Abrir contas bloqueadas">
+                    <Grid RowSpacing="14">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <Border Width="34" Height="34" CornerRadius="17" Background="{ThemeResource DashboardBlueSoftBrush}">
+                                <FontIcon Glyph="&#xE72E;" FontSize="15" Foreground="{ThemeResource DashboardBlueBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="Contas bloqueadas" FontWeight="SemiBold" FontSize="14" Foreground="{ThemeResource DashboardTitleBrush}"/>
+                                <TextBlock Text="LDAP com lockoutTime ≥ 1" FontSize="11" Foreground="{ThemeResource DashboardMutedBrush}"/>
+                            </StackPanel>
                         </StackPanel>
-                        <TextBlock
-                            Grid.Row="2"
-                            x:Name="KpiLockedCountTextBlock"
-                            Text="—"
-                            FontSize="36"
-                            FontFamily="Cascadia Mono, Consolas"
-                            FontWeight="SemiBold"
-                            HorizontalAlignment="Center"
-                            TextAlignment="Center"
-                            Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
-                        <TextBlock
-                            Grid.Row="1"
-                            Text="LDAP com lockoutTime >= 1"
-                            Style="{StaticResource CaptionTextBlockStyle}"
-                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                            TextWrapping="Wrap"
-                            MaxLines="2"
-                            TextTrimming="WordEllipsis"/>
+                        <Grid Grid.Row="1" ColumnSpacing="10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock x:Name="KpiLockedCountTextBlock" Text="—" FontSize="34" FontWeight="SemiBold" Foreground="{ThemeResource DashboardBlueBrush}" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="1" Text="Contas atualmente bloqueadas no Active Directory." FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center" Foreground="{ThemeResource DashboardMutedBrush}"/>
+                            <FontIcon Grid.Column="2" Glyph="&#xE716;" FontSize="22" Opacity="0.28" Foreground="{ThemeResource DashboardBlueBrush}" VerticalAlignment="Center"/>
+                        </Grid>
                     </Grid>
                 </Button>
 
-                <!-- Expiram hoje -->
-                <Button
-                    Grid.Row="0"
-                    Grid.Column="1"
-                    Style="{StaticResource MicaCardButtonStyle}"
-                    Click="ExpiramHojeCard_Click">
-                    <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="6">
-                        <StackPanel
-                            Grid.Row="0"
-                            Orientation="Horizontal"
-                            Spacing="8"
-                            VerticalAlignment="Center">
-                            <FontIcon
-                                Glyph="&#xE121;"
-                                FontSize="14"
-                                Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
-                                VerticalAlignment="Center"/>
-                            <TextBlock
-                                Text="Contas que expiram hoje"
-                                Style="{StaticResource BodyStrongTextBlockStyle}"
-                                TextWrapping="Wrap"
-                                MaxLines="2"
-                                TextTrimming="WordEllipsis"/>
+                <Button Grid.Column="1" Style="{StaticResource DashboardKpiButtonStyle}" Click="ExpiramHojeCard_Click" ToolTipService.ToolTip="Abrir senhas que expiram hoje">
+                    <Grid RowSpacing="14">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <Border Width="34" Height="34" CornerRadius="17" Background="{ThemeResource DashboardOrangeSoftBrush}">
+                                <FontIcon Glyph="&#xE823;" FontSize="15" Foreground="{ThemeResource DashboardOrangeBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="Expiram hoje" FontWeight="SemiBold" FontSize="14" Foreground="{ThemeResource DashboardTitleBrush}"/>
+                                <TextBlock Text="Pela política de senha do domínio" FontSize="11" Foreground="{ThemeResource DashboardMutedBrush}"/>
+                            </StackPanel>
                         </StackPanel>
-                        <TextBlock
-                            Grid.Row="2"
-                            x:Name="KpiExpireTodayCountTextBlock"
-                            Text="—"
-                            FontSize="36"
-                            FontFamily="Cascadia Mono, Consolas"
-                            FontWeight="SemiBold"
-                            HorizontalAlignment="Center"
-                            TextAlignment="Center"
-                            Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
-                        <TextBlock
-                            Grid.Row="1"
-                            Text="Pela política de senha do domínio"
-                            Style="{StaticResource CaptionTextBlockStyle}"
-                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                            TextWrapping="Wrap"
-                            MaxLines="2"
-                            TextTrimming="WordEllipsis"/>
+                        <Grid Grid.Row="1" ColumnSpacing="10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock x:Name="KpiExpireTodayCountTextBlock" Text="—" FontSize="34" FontWeight="SemiBold" Foreground="{ThemeResource DashboardOrangeBrush}" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="1" Text="Contas que expiram hoje no Active Directory." FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center" Foreground="{ThemeResource DashboardMutedBrush}"/>
+                            <FontIcon Grid.Column="2" Glyph="&#xE787;" FontSize="22" Opacity="0.28" Foreground="{ThemeResource DashboardOrangeBrush}" VerticalAlignment="Center"/>
+                        </Grid>
                     </Grid>
                 </Button>
 
-                <!-- Expiram em 1 semana -->
-                <Button
-                    Grid.Row="1"
-                    Grid.Column="0"
-                    Style="{StaticResource MicaCardButtonStyle}"
-                    Click="ExpiramEmUmaSemanaCard_Click">
-                    <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="6">
-                        <StackPanel
-                            Grid.Row="0"
-                            Orientation="Horizontal"
-                            Spacing="8"
-                            VerticalAlignment="Center">
-                            <FontIcon
-                                Glyph="&#xE121;"
-                                FontSize="14"
-                                Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
-                                VerticalAlignment="Center"/>
-                            <TextBlock
-                                Text="Contas que expiram em 1 semana"
-                                Style="{StaticResource BodyStrongTextBlockStyle}"
-                                TextWrapping="Wrap"
-                                MaxLines="2"
-                                TextTrimming="WordEllipsis"/>
+                <Button Grid.Column="2" Style="{StaticResource DashboardKpiButtonStyle}" Click="ExpiramEmUmaSemanaCard_Click" ToolTipService.ToolTip="Abrir senhas dos próximos 7 dias">
+                    <Grid RowSpacing="14">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <Border Width="34" Height="34" CornerRadius="17" Background="{ThemeResource DashboardPurpleSoftBrush}">
+                                <FontIcon Glyph="&#xE787;" FontSize="15" Foreground="{ThemeResource DashboardPurpleBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="Expiram nos próximos 7 dias" FontWeight="SemiBold" FontSize="14" Foreground="{ThemeResource DashboardTitleBrush}" TextWrapping="Wrap"/>
+                                <TextBlock Text="Pela política de senha do domínio" FontSize="11" Foreground="{ThemeResource DashboardMutedBrush}"/>
+                            </StackPanel>
                         </StackPanel>
-                        <TextBlock
-                            Grid.Row="2"
-                            x:Name="KpiExpireInWeekCountTextBlock"
-                            Text="—"
-                            FontSize="36"
-                            FontFamily="Cascadia Mono, Consolas"
-                            FontWeight="SemiBold"
-                            HorizontalAlignment="Center"
-                            TextAlignment="Center"
-                            Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
-                        <TextBlock
-                            Grid.Row="1"
-                            Text="Hoje e os próximos 6 dias (7 dias)"
-                            Style="{StaticResource CaptionTextBlockStyle}"
-                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                            TextWrapping="Wrap"
-                            MaxLines="2"
-                            TextTrimming="WordEllipsis"/>
+                        <Grid Grid.Row="1" ColumnSpacing="10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock x:Name="KpiExpireInWeekCountTextBlock" Text="—" FontSize="34" FontWeight="SemiBold" Foreground="{ThemeResource DashboardPurpleBrush}" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="1" Text="Contas que expiram nos próximos 7 dias no Active Directory." FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center" Foreground="{ThemeResource DashboardMutedBrush}"/>
+                            <FontIcon Grid.Column="2" Glyph="&#xE787;" FontSize="22" Opacity="0.28" Foreground="{ThemeResource DashboardPurpleBrush}" VerticalAlignment="Center"/>
+                        </Grid>
                     </Grid>
                 </Button>
 
-                <!-- Troca próximo logon -->
-                <Button
-                    Grid.Row="1"
-                    Grid.Column="1"
-                    Style="{StaticResource MicaCardButtonStyle}"
-                    Click="TrocaProximoLogonCard_Click">
-                    <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="6">
-                        <StackPanel
-                            Grid.Row="0"
-                            Orientation="Horizontal"
-                            Spacing="8"
-                            VerticalAlignment="Center">
-                            <FontIcon
-                                Glyph="&#xE121;"
-                                FontSize="14"
-                                Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
-                                VerticalAlignment="Center"/>
-                            <TextBlock
-                                Text="Troca no próximo logon"
-                                Style="{StaticResource BodyStrongTextBlockStyle}"
-                                TextWrapping="Wrap"
-                                MaxLines="2"
-                                TextTrimming="WordEllipsis"/>
+                <Button Grid.Column="3" Style="{StaticResource DashboardKpiButtonStyle}" Click="TrocaProximoLogonCard_Click" ToolTipService.ToolTip="Abrir trocas no próximo logon">
+                    <Grid RowSpacing="14">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <Border Width="34" Height="34" CornerRadius="17" Background="{ThemeResource DashboardGreenSoftBrush}">
+                                <FontIcon Glyph="&#xE192;" FontSize="15" Foreground="{ThemeResource DashboardGreenBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="Troca no próximo logon" FontWeight="SemiBold" FontSize="14" Foreground="{ThemeResource DashboardTitleBrush}" TextWrapping="Wrap"/>
+                                <TextBlock Text="LDAP com pwdLastSet = 0" FontSize="11" Foreground="{ThemeResource DashboardMutedBrush}"/>
+                            </StackPanel>
                         </StackPanel>
-                        <TextBlock
-                            Grid.Row="2"
-                            x:Name="KpiMustChangeNextLogonCountTextBlock"
-                            Text="—"
-                            FontSize="36"
-                            FontFamily="Cascadia Mono, Consolas"
-                            FontWeight="SemiBold"
-                            HorizontalAlignment="Center"
-                            TextAlignment="Center"
-                            Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
-                        <TextBlock
-                            Grid.Row="1"
-                            Text="LDAP com pwdLastSet = 0"
-                            Style="{StaticResource CaptionTextBlockStyle}"
-                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                            TextWrapping="Wrap"
-                            MaxLines="2"
-                            TextTrimming="WordEllipsis"/>
+                        <Grid Grid.Row="1" ColumnSpacing="10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock x:Name="KpiMustChangeNextLogonCountTextBlock" Text="—" FontSize="34" FontWeight="SemiBold" Foreground="{ThemeResource DashboardGreenBrush}" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="1" Text="Contas que exigem troca de senha no próximo logon." FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center" Foreground="{ThemeResource DashboardMutedBrush}"/>
+                            <FontIcon Grid.Column="2" Glyph="&#xE77B;" FontSize="22" Opacity="0.28" Foreground="{ThemeResource DashboardGreenBrush}" VerticalAlignment="Center"/>
+                        </Grid>
                     </Grid>
                 </Button>
             </Grid>
 
-            <!-- Gráfico 1: distribuição diária -->
-            <Border Grid.Row="2" Style="{StaticResource MicaCardStyle}">
-                <Grid RowSpacing="8">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
+            <Grid Grid.Row="2" ColumnSpacing="12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="1.35*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
 
-                    <StackPanel Grid.Row="0" Spacing="2">
-                        <StackPanel Orientation="Horizontal" Spacing="10">
-                            <FontIcon
-                                Glyph="&#xE9D9;"
-                                FontSize="16"
-                                Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
-                                VerticalAlignment="Center"/>
-                            <TextBlock
-                                Text="Expirações (distribuição diária)"
-                                Style="{StaticResource BodyStrongTextBlockStyle}"
-                                VerticalAlignment="Center"/>
-                        </StackPanel>
+                <Border Grid.Column="0" Style="{StaticResource DashboardCardStyle}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <Grid ColumnSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Spacing="2">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon Glyph="&#xE9D9;" FontSize="16" Foreground="{ThemeResource DashboardBlueBrush}" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Expirações previstas (próximos 7 dias)" FontWeight="SemiBold" FontSize="15" VerticalAlignment="Center" Foreground="{ThemeResource DashboardTitleBrush}"/>
+                                </StackPanel>
+                                <TextBlock
+                                    Text="Contas com expiração de senha, conforme consulta atual ao Active Directory."
+                                    FontSize="12"
+                                    Foreground="{ThemeResource DashboardMutedBrush}"
+                                    TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Top">
+                                <TextBlock
+                                    Text="Dados em tempo real. Não há histórico salvo."
+                                    FontSize="11"
+                                    Foreground="{ThemeResource DashboardMutedBrush}"
+                                    TextWrapping="Wrap"
+                                    TextAlignment="Right"
+                                    MaxWidth="150"
+                                    VerticalAlignment="Center"/>
+                                <Border Background="{ThemeResource DashboardBadgeGrayBrush}" CornerRadius="10" Padding="8,3" VerticalAlignment="Center" ToolTipService.ToolTip="O gráfico usa só a consulta atual.">
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <FontIcon Glyph="&#xE946;" FontSize="11" Foreground="{ThemeResource DashboardMutedBrush}" VerticalAlignment="Center"/>
+                                        <TextBlock Text="Sem histórico" FontSize="11" Foreground="{ThemeResource DashboardMutedBrush}" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </Grid>
+                        <lvc:CartesianChart
+                            x:Name="ExpiracoesPorDiaChart"
+                            Grid.Row="1"
+                            MinHeight="230"
+                            Margin="0,8,0,0"
+                            LegendPosition="Hidden"
+                            Background="Transparent"/>
+                    </Grid>
+                </Border>
+
+                <Border Grid.Column="1" Style="{StaticResource DashboardCardStyle}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <Grid ColumnSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Spacing="2">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon Glyph="&#xE9D2;" FontSize="16" Foreground="{ThemeResource DashboardBlueBrush}" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Distribuição por status (consulta atual)" FontWeight="SemiBold" FontSize="15" VerticalAlignment="Center" TextWrapping="Wrap" Foreground="{ThemeResource DashboardTitleBrush}"/>
+                                </StackPanel>
+                                <TextBlock
+                                    Text="Resumo das principais condições das contas no Active Directory."
+                                    FontSize="12"
+                                    Foreground="{ThemeResource DashboardMutedBrush}"
+                                    TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Top">
+                                <TextBlock
+                                    Text="Dados em tempo real. Não há histórico salvo."
+                                    FontSize="11"
+                                    Foreground="{ThemeResource DashboardMutedBrush}"
+                                    TextWrapping="Wrap"
+                                    TextAlignment="Right"
+                                    MaxWidth="120"
+                                    VerticalAlignment="Center"/>
+                                <Border Background="{ThemeResource DashboardBadgeGrayBrush}" CornerRadius="10" Padding="8,3" VerticalAlignment="Center">
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <FontIcon Glyph="&#xE946;" FontSize="11" Foreground="{ThemeResource DashboardMutedBrush}" VerticalAlignment="Center"/>
+                                        <TextBlock Text="Sem histórico" FontSize="11" Foreground="{ThemeResource DashboardMutedBrush}" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid Grid.Row="1" Margin="0,12,0,0" ColumnSpacing="8" VerticalAlignment="Center">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid Width="196" Height="196">
+                                <lvc:PieChart
+                                    x:Name="StatusPieChart"
+                                    LegendPosition="Hidden"
+                                    Background="Transparent"/>
+                                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False">
+                                    <TextBlock Text="Total" FontSize="12" HorizontalAlignment="Center" Foreground="{ThemeResource DashboardMutedBrush}"/>
+                                    <TextBlock
+                                        x:Name="TotalContasText"
+                                        Text="—"
+                                        FontSize="22"
+                                        FontWeight="SemiBold"
+                                        HorizontalAlignment="Center"
+                                        Foreground="{ThemeResource DashboardTitleBrush}"/>
+                                    <TextBlock Text="contas" FontSize="12" HorizontalAlignment="Center" Foreground="{ThemeResource DashboardMutedBrush}"/>
+                                </StackPanel>
+                            </Grid>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="8">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="16"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Ellipse Width="8" Height="8" Fill="{ThemeResource DashboardBlueBrush}" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" Text="Contas bloqueadas" FontSize="12" Margin="4,0,8,0" Foreground="{ThemeResource DashboardTitleBrush}"/>
+                                    <TextBlock x:Name="LegendLockedText" Grid.Column="2" Text="—" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource DashboardTitleBrush}"/>
+                                </Grid>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="16"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Ellipse Width="8" Height="8" Fill="{ThemeResource DashboardOrangeBrush}" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" Text="Expiram hoje" FontSize="12" Margin="4,0,8,0" Foreground="{ThemeResource DashboardTitleBrush}"/>
+                                    <TextBlock x:Name="LegendTodayText" Grid.Column="2" Text="—" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource DashboardTitleBrush}"/>
+                                </Grid>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="16"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Ellipse Width="8" Height="8" Fill="{ThemeResource DashboardPurpleBrush}" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" Text="Expiram nos próximos 7 dias" FontSize="12" Margin="4,0,8,0" TextWrapping="Wrap" Foreground="{ThemeResource DashboardTitleBrush}"/>
+                                    <TextBlock x:Name="LegendWeekText" Grid.Column="2" Text="—" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource DashboardTitleBrush}"/>
+                                </Grid>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="16"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Ellipse Width="8" Height="8" Fill="{ThemeResource DashboardGreenBrush}" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" Text="Troca no próximo logon" FontSize="12" Margin="4,0,8,0" TextWrapping="Wrap" Foreground="{ThemeResource DashboardTitleBrush}"/>
+                                    <TextBlock x:Name="LegendMustChangeText" Grid.Column="2" Text="—" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource DashboardTitleBrush}"/>
+                                </Grid>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="16"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Ellipse Width="8" Height="8" Fill="#CBD5E1" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" Text="Demais contas" FontSize="12" Margin="4,0,8,0" Foreground="{ThemeResource DashboardTitleBrush}"/>
+                                    <TextBlock x:Name="LegendOtherText" Grid.Column="2" Text="—" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource DashboardTitleBrush}"/>
+                                </Grid>
+                            </StackPanel>
+                        </Grid>
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <Grid Grid.Row="3" ColumnSpacing="12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <Border Grid.Column="0" Style="{StaticResource DashboardCardStyle}">
+                    <Grid RowSpacing="8">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <FontIcon Glyph="&#xE787;" FontSize="16" Foreground="{ThemeResource DashboardOrangeBrush}" VerticalAlignment="Center"/>
+                                <StackPanel>
+                                    <TextBlock Text="Contas que expiram primeiro" FontWeight="SemiBold" FontSize="14" Foreground="{ThemeResource DashboardTitleBrush}"/>
+                                    <TextBlock Text="Contas com senha expirando, conforme consulta atual." FontSize="11" Foreground="{ThemeResource DashboardMutedBrush}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </StackPanel>
+                            <HyperlinkButton Grid.Column="1" Content="Ver todas" Click="VerExpiracoes_Click" FontSize="12" Padding="8,0" VerticalAlignment="Top" Foreground="{ThemeResource DashboardLinkBrush}"/>
+                        </Grid>
+                        <Grid Grid.Row="1" Margin="2,4,2,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="124"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Usuário" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource DashboardMutedBrush}"/>
+                            <TextBlock Grid.Column="1" Text="Nome" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource DashboardMutedBrush}"/>
+                            <TextBlock Grid.Column="2" Text="Expira em" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource DashboardMutedBrush}" HorizontalAlignment="Right"/>
+                        </Grid>
+                        <ItemsRepeater x:Name="ExpiringRepeater" Grid.Row="2" ItemTemplate="{StaticResource PreviewRowTemplate}">
+                            <ItemsRepeater.Layout>
+                                <StackLayout Orientation="Vertical" Spacing="0"/>
+                            </ItemsRepeater.Layout>
+                        </ItemsRepeater>
                         <TextBlock
-                            Text="Hoje e os próximos 6 dias (7 dias)."
-                            Style="{StaticResource CaptionTextBlockStyle}"
-                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                            TextWrapping="Wrap"
-                            MaxLines="2"
-                            TextTrimming="WordEllipsis"/>
-                    </StackPanel>
+                            x:Name="ExpiringEmptyText"
+                            Grid.Row="3"
+                            Text="Consultando…"
+                            FontSize="12"
+                            Foreground="{ThemeResource DashboardMutedBrush}"
+                            Margin="2,8,0,4"/>
+                    </Grid>
+                </Border>
 
-                    <lvc:CartesianChart
-                        x:Name="ExpiracoesPorDiaChart"
-                        Grid.Row="1"
-                        MinHeight="220"
-                        HorizontalAlignment="Stretch"
-                        VerticalAlignment="Stretch"/>
-                </Grid>
-            </Border>
-
-            <!-- Gráfico 2: Hoje vs Próximos dias -->
-            <Border Grid.Row="3" Style="{StaticResource MicaCardStyle}">
-                <Grid RowSpacing="8">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
-
-                    <StackPanel Grid.Row="0" Spacing="2">
-                        <StackPanel Orientation="Horizontal" Spacing="10">
-                            <FontIcon
-                                Glyph="&#xE9DA;"
-                                FontSize="16"
-                                Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
-                                VerticalAlignment="Center"/>
-                            <TextBlock
-                                Text="Hoje vs Próximos dias"
-                                Style="{StaticResource BodyStrongTextBlockStyle}"
-                                VerticalAlignment="Center"
-                                TextWrapping="Wrap"
-                                MaxLines="1"
-                                TextTrimming="CharacterEllipsis"/>
-                        </StackPanel>
+                <Border Grid.Column="1" Style="{StaticResource DashboardCardStyle}">
+                    <Grid RowSpacing="8">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <FontIcon Glyph="&#xE72E;" FontSize="16" Foreground="{ThemeResource DashboardBlueBrush}" VerticalAlignment="Center"/>
+                                <StackPanel>
+                                    <TextBlock Text="Contas bloqueadas agora" FontWeight="SemiBold" FontSize="14" Foreground="{ThemeResource DashboardTitleBrush}"/>
+                                    <TextBlock Text="Contas com lockoutTime ≥ 1, conforme consulta atual." FontSize="11" Foreground="{ThemeResource DashboardMutedBrush}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </StackPanel>
+                            <HyperlinkButton Grid.Column="1" Content="Ver todas" Click="VerBloqueadas_Click" FontSize="12" Padding="8,0" VerticalAlignment="Top" Foreground="{ThemeResource DashboardLinkBrush}"/>
+                        </Grid>
+                        <Grid Grid.Row="1" Margin="2,4,2,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="124"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Usuário" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource DashboardMutedBrush}"/>
+                            <TextBlock Grid.Column="1" Text="Nome" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource DashboardMutedBrush}"/>
+                            <TextBlock Grid.Column="2" Text="Desde (lockout)" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource DashboardMutedBrush}" HorizontalAlignment="Right"/>
+                        </Grid>
+                        <ItemsRepeater x:Name="LockedRepeater" Grid.Row="2" ItemTemplate="{StaticResource PreviewRowTemplate}">
+                            <ItemsRepeater.Layout>
+                                <StackLayout Orientation="Vertical" Spacing="0"/>
+                            </ItemsRepeater.Layout>
+                        </ItemsRepeater>
                         <TextBlock
-                            Text="Comparação dentro da mesma janela (7 dias)."
-                            Style="{StaticResource CaptionTextBlockStyle}"
-                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                            TextWrapping="Wrap"
-                            MaxLines="2"
-                            TextTrimming="WordEllipsis"/>
-                    </StackPanel>
+                            x:Name="LockedEmptyText"
+                            Grid.Row="3"
+                            Text="Consultando…"
+                            FontSize="12"
+                            Foreground="{ThemeResource DashboardMutedBrush}"
+                            Margin="2,8,0,4"/>
+                    </Grid>
+                </Border>
 
-                    <lvc:CartesianChart
-                        x:Name="ExpireHojeVsProximosChart"
-                        Grid.Row="1"
-                        MinHeight="220"
-                        HorizontalAlignment="Stretch"
-                        VerticalAlignment="Stretch"/>
-                </Grid>
-            </Border>
+                <Border Grid.Column="2" Style="{StaticResource DashboardCardStyle}">
+                    <Grid RowSpacing="8">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <FontIcon Glyph="&#xE192;" FontSize="16" Foreground="{ThemeResource DashboardGreenBrush}" VerticalAlignment="Center"/>
+                                <StackPanel>
+                                    <TextBlock Text="Usuários com troca no próximo logon" FontWeight="SemiBold" FontSize="14" Foreground="{ThemeResource DashboardTitleBrush}" TextWrapping="Wrap"/>
+                                    <TextBlock Text="Contas com pwdLastSet = 0, conforme consulta atual." FontSize="11" Foreground="{ThemeResource DashboardMutedBrush}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </StackPanel>
+                            <HyperlinkButton Grid.Column="1" Content="Ver todas" Click="VerProximoLogon_Click" FontSize="12" Padding="8,0" VerticalAlignment="Top" Foreground="{ThemeResource DashboardLinkBrush}"/>
+                        </Grid>
+                        <Grid Grid.Row="1" Margin="2,4,2,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="124"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Usuário" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource DashboardMutedBrush}"/>
+                            <TextBlock Grid.Column="1" Text="Nome" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource DashboardMutedBrush}"/>
+                            <TextBlock Grid.Column="2" Text="Status" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource DashboardMutedBrush}" HorizontalAlignment="Right"/>
+                        </Grid>
+                        <ItemsRepeater x:Name="MustChangeRepeater" Grid.Row="2" ItemTemplate="{StaticResource PreviewRowTemplate}">
+                            <ItemsRepeater.Layout>
+                                <StackLayout Orientation="Vertical" Spacing="0"/>
+                            </ItemsRepeater.Layout>
+                        </ItemsRepeater>
+                        <TextBlock
+                            x:Name="MustChangeEmptyText"
+                            Grid.Row="3"
+                            Text="Consultando…"
+                            FontSize="12"
+                            Foreground="{ThemeResource DashboardMutedBrush}"
+                            Margin="2,8,0,4"/>
+                    </Grid>
+                </Border>
+            </Grid>
         </Grid>
     </ScrollViewer>
 </Page>
-

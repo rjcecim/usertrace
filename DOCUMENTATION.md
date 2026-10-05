@@ -349,17 +349,20 @@ Transição de navegação: `EntranceNavigationTransitionInfo` (desliza de baixo
 
 ### `DashboardPage`
 
-Página inicial com **KPIs** e **gráficos** (LiveCharts) para visão geral:
+Página inicial com **KPIs**, **gráficos** (LiveCharts) e prévias das contas:
 
 - Contas bloqueadas (LDAP `lockoutTime >= 1`)
 - Senhas que expiram hoje
 - Senhas que expiram na janela de 7 dias (hoje..+6), incluindo distribuição diária
 - Contas obrigadas a trocar no próximo logon (LDAP `pwdLastSet = 0`)
+- Distribuição por status, com o total de contas ativas e o restante fora dessas condições
+- Prévias das contas que expiram primeiro, das bloqueadas e das que trocam no próximo logon
 
 **Comportamento:**
 - Carrega automaticamente ao abrir (evento `Loaded`)
 - Botão **Atualizar** refaz as consultas
-- Cards KPI e colunas do gráfico navegam para `ContasBloqueadas` ou `SenhasExpiradas` com `SenhasExpiradasNavigationPreset`
+- Cards KPI, “Ver todas” e colunas do gráfico navegam para `ContasBloqueadas` ou `SenhasExpiradas` com `SenhasExpiradasNavigationPreset`
+- Um clique numa linha da prévia abre o login correspondente
 
 ---
 
@@ -584,15 +587,17 @@ A página `DashboardPage` oferece uma visão geral das contas do AD e atalhos pa
 
 Na carga (e ao clicar em **Atualizar**), o Dashboard executa em paralelo:
 
-- `GetLockedOutAccountsAsync` → KPI “Contas Bloqueadas”
-- `GetPasswordExpiringTodayAsync` → KPI “Contas que expiram hoje”
-- `GetPasswordExpiringInRangeAsync(hoje, hoje+6)` → KPI “Contas que expiram em 1 semana” e distribuição diária (7 dias)
-- `GetMustChangePasswordAtNextLogonAsync` → KPI “Troca no próximo logon”
+- `GetLockedOutAccountsAsync` → KPI “Contas bloqueadas” e prévia
+- `GetPasswordExpiringInRangeAsync(hoje, hoje+6)` → KPI de hoje, KPI dos 7 dias, gráfico diário e prévia
+- `GetMustChangePasswordAtNextLogonAsync` → KPI “Troca no próximo logon” e prévia
+- `CountActiveUsersAsync` → total da rosca; “Demais contas” é o que sobra depois dos quatro grupos
 
 ### Interação
 
-- **Cards KPI clicáveis:** navegam para a página correspondente.
+- **Cards KPI e “Ver todas”:** navegam para a página correspondente.
 - **Gráfico de distribuição diária:** clicar em uma coluna navega para `SenhasExpiradas` com preset “Data específica” (hoje..+6).
+- **Linha da prévia:** abre a Busca por Login daquele usuário.
+- **Busca do topo:** usuários, grupos e setores; Ctrl+K foca o campo. Usuário abre o login, grupo abre a busca de grupo e setor abre a busca de setor.
 
 ---
 
