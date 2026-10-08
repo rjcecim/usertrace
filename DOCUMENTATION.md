@@ -355,7 +355,7 @@ Página inicial com **KPIs**, **gráficos** (LiveCharts) e prévias das contas:
 - Senhas que expiram hoje
 - Senhas que expiram na janela de 7 dias (hoje..+6), incluindo distribuição diária
 - Contas obrigadas a trocar no próximo logon (LDAP `pwdLastSet = 0`)
-- Distribuição por status, com o total de contas ativas e o restante fora dessas condições
+- Distribuição por status das quatro condições, com o total de contas ativas no centro
 - Prévias das contas que expiram primeiro, das bloqueadas e das que trocam no próximo logon
 
 **Comportamento:**
@@ -590,7 +590,7 @@ Na carga (e ao clicar em **Atualizar**), o Dashboard executa em paralelo:
 - `GetLockedOutAccountsAsync` → KPI “Contas bloqueadas” e prévia
 - `GetPasswordExpiringInRangeAsync(hoje, hoje+6)` → KPI de hoje, KPI dos 7 dias, gráfico diário e prévia
 - `GetMustChangePasswordAtNextLogonAsync` → KPI “Troca no próximo logon” e prévia
-- `CountActiveUsersAsync` → total da rosca; “Demais contas” é o que sobra depois dos quatro grupos
+- `CountActiveUsersAsync` → número total no centro da rosca. A rosca desenha só as quatro condições
 
 ### Interação
 

@@ -2,12 +2,14 @@
 
 Uma seção por versão. Correções, ajustes, refatorações e mudanças internas incrementam só o Build.
 
-## 1.7.0 (Build 1)
+## 1.7.0 (Build 2)
 
 - O dashboard mostra a consulta atual: quatro indicadores, expirações dos próximos 7 dias, distribuição por status e as primeiras contas de cada lista.
 - A faixa do topo busca usuários, grupos e setores. Ctrl+K foca a busca.
 - O rodapé informa a versão e se o Active Directory respondeu.
 - A janela é arrastada pela faixa do topo, e o botão de recolher o menu permanece visível.
+- O dashboard ocupa a janela inteira e os cards acompanham o redimensionamento vertical.
+- A rosca de status fica maior e desenha só as quatro condições. O total de contas ativas permanece no centro.
 
 ## 1.6.0 (Build 2)
 

@@ -45,6 +45,23 @@ public sealed partial class DashboardPage : Page
         _ = CarregarAsync();
     }
 
+    private double _lastDonutSide;
+
+    private void PieHost_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        var side = e.NewSize.Height;
+        if (double.IsNaN(side) || side < 80) return;
+        if (Math.Abs(PieHost.Width - side) > 1)
+        {
+            PieHost.Width = side;
+            return;
+        }
+
+        if (_labels7 is null || Math.Abs(side - _lastDonutSide) < 20) return;
+        _lastDonutSide = side;
+        RenderCharts();
+    }
+
     private void DashboardPage_ActualThemeChanged(FrameworkElement sender, object args)
     {
         if (_labels7 is null || _distribution7 is null) return;
@@ -196,7 +213,6 @@ public sealed partial class DashboardPage : Page
             LegendTodayText.Text = _expiringTodayCount.ToString("N0", PtBr);
             LegendWeekText.Text = _expiringWeekCount.ToString("N0", PtBr);
             LegendMustChangeText.Text = _mustChangeCount.ToString("N0", PtBr);
-            LegendOtherText.Text = totalActive is null ? "—" : _demaisCount.ToString("N0", PtBr);
             TotalContasText.Text = _displayedTotal.ToString("N0", PtBr);
 
             var byDay = expiringInWeek.Items
@@ -446,17 +462,28 @@ public sealed partial class DashboardPage : Page
         };
 
         var hole = isDark ? new SKColor(17, 24, 39) : SKColors.White;
+        var inner = DonutHole();
         var slices = new List<ISeries>();
-        AddSlice(slices, "Contas bloqueadas", _lockedCount, new SKColor(37, 99, 235), hole);
-        AddSlice(slices, "Expiram hoje", _expiringTodayCount, new SKColor(249, 115, 22), hole);
-        AddSlice(slices, "Expiram nos próximos 7 dias", _expiringWeekCount, new SKColor(124, 58, 237), hole);
-        AddSlice(slices, "Troca no próximo logon", _mustChangeCount, new SKColor(22, 163, 74), hole);
-        AddSlice(slices, "Demais contas", _demaisCount, new SKColor(203, 213, 225), hole);
+        AddSlice(slices, "Contas bloqueadas", _lockedCount, new SKColor(37, 99, 235), hole, inner);
+        AddSlice(slices, "Expiram hoje", _expiringTodayCount, new SKColor(249, 115, 22), hole, inner);
+        AddSlice(slices, "Expiram nos próximos 7 dias", _expiringWeekCount, new SKColor(124, 58, 237), hole, inner);
+        AddSlice(slices, "Troca no próximo logon", _mustChangeCount, new SKColor(22, 163, 74), hole, inner);
         StatusPieChart.Series = slices;
         StatusPieChart.InitialRotation = -90;
+        StatusPieChart.DrawMargin = new Margin(2);
     }
 
-    private static void AddSlice(List<ISeries> slices, string name, int value, SKColor color, SKColor hole)
+    private double DonutHole()
+    {
+        var side = PieHost.ActualWidth;
+        if (double.IsNaN(side) || side < 80)
+            side = PieHost.ActualHeight;
+        if (double.IsNaN(side) || side < 80)
+            side = 180;
+        return side * 0.31;
+    }
+
+    private static void AddSlice(List<ISeries> slices, string name, int value, SKColor color, SKColor hole, double innerRadius)
     {
         if (value <= 0) return;
 
@@ -466,7 +493,7 @@ public sealed partial class DashboardPage : Page
             Values = new[] { value },
             Fill = new SolidColorPaint(color),
             Stroke = new SolidColorPaint(hole) { StrokeThickness = 3 },
-            InnerRadius = 62,
+            InnerRadius = innerRadius,
             DataLabelsPaint = null,
             HoverPushout = 6
         });

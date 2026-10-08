@@ -12,7 +12,9 @@
             <Setter Property="BorderBrush" Value="{ThemeResource DashboardCardStrokeBrush}"/>
             <Setter Property="CornerRadius" Value="12"/>
             <Setter Property="Padding" Value="16,14"/>
-            <Setter Property="MinHeight" Value="132"/>
+            <Setter Property="MinHeight" Value="112"/>
+            <Setter Property="VerticalAlignment" Value="Stretch"/>
+            <Setter Property="VerticalContentAlignment" Value="Stretch"/>
         </Style>
 
         <Style x:Key="DashboardCardStyle" TargetType="Border" BasedOn="{StaticResource MicaCardStyle}">
@@ -76,13 +78,12 @@
         </DataTemplate>
     </Page.Resources>
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-        <Grid Margin="20,8,20,20" RowSpacing="14">
+    <Grid x:Name="DashboardRoot" Margin="20,8,20,16" RowSpacing="14">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="1*" MinHeight="112"/>
+                <RowDefinition Height="1.55*" MinHeight="200"/>
+                <RowDefinition Height="1.25*" MinHeight="168"/>
             </Grid.RowDefinitions>
 
             <Grid Grid.Row="0">
@@ -189,6 +190,7 @@
                     <Grid RowSpacing="14">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
                         <StackPanel Orientation="Horizontal" Spacing="10">
@@ -200,7 +202,7 @@
                                 <TextBlock Text="LDAP com lockoutTime ≥ 1" FontSize="11" Foreground="{ThemeResource DashboardMutedBrush}"/>
                             </StackPanel>
                         </StackPanel>
-                        <Grid Grid.Row="1" ColumnSpacing="10">
+                        <Grid Grid.Row="2" ColumnSpacing="10">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
@@ -217,6 +219,7 @@
                     <Grid RowSpacing="14">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
                         <StackPanel Orientation="Horizontal" Spacing="10">
@@ -228,7 +231,7 @@
                                 <TextBlock Text="Pela política de senha do domínio" FontSize="11" Foreground="{ThemeResource DashboardMutedBrush}"/>
                             </StackPanel>
                         </StackPanel>
-                        <Grid Grid.Row="1" ColumnSpacing="10">
+                        <Grid Grid.Row="2" ColumnSpacing="10">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
@@ -245,6 +248,7 @@
                     <Grid RowSpacing="14">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
                         <StackPanel Orientation="Horizontal" Spacing="10">
@@ -256,7 +260,7 @@
                                 <TextBlock Text="Pela política de senha do domínio" FontSize="11" Foreground="{ThemeResource DashboardMutedBrush}"/>
                             </StackPanel>
                         </StackPanel>
-                        <Grid Grid.Row="1" ColumnSpacing="10">
+                        <Grid Grid.Row="2" ColumnSpacing="10">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
@@ -273,6 +277,7 @@
                     <Grid RowSpacing="14">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
                         <StackPanel Orientation="Horizontal" Spacing="10">
@@ -284,7 +289,7 @@
                                 <TextBlock Text="LDAP com pwdLastSet = 0" FontSize="11" Foreground="{ThemeResource DashboardMutedBrush}"/>
                             </StackPanel>
                         </StackPanel>
-                        <Grid Grid.Row="1" ColumnSpacing="10">
+                        <Grid Grid.Row="2" ColumnSpacing="10">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
@@ -346,10 +351,11 @@
                         <lvc:CartesianChart
                             x:Name="ExpiracoesPorDiaChart"
                             Grid.Row="1"
-                            MinHeight="230"
                             Margin="0,8,0,0"
                             LegendPosition="Hidden"
-                            Background="Transparent"/>
+                            Background="Transparent"
+                            VerticalAlignment="Stretch"
+                            HorizontalAlignment="Stretch"/>
                     </Grid>
                 </Border>
 
@@ -393,16 +399,24 @@
                             </StackPanel>
                         </Grid>
 
-                        <Grid Grid.Row="1" Margin="0,12,0,0" ColumnSpacing="8" VerticalAlignment="Center">
+                        <Grid Grid.Row="1" Margin="0,4,0,0" ColumnSpacing="16">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <Grid Width="196" Height="196">
+                            <Grid
+                                x:Name="PieHost"
+                                MinWidth="220"
+                                MinHeight="220"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                SizeChanged="PieHost_SizeChanged">
                                 <lvc:PieChart
                                     x:Name="StatusPieChart"
                                     LegendPosition="Hidden"
-                                    Background="Transparent"/>
+                                    Background="Transparent"
+                                    HorizontalAlignment="Stretch"
+                                    VerticalAlignment="Stretch"/>
                                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False">
                                     <TextBlock Text="Total" FontSize="12" HorizontalAlignment="Center" Foreground="{ThemeResource DashboardMutedBrush}"/>
                                     <TextBlock
@@ -455,16 +469,6 @@
                                     <Ellipse Width="8" Height="8" Fill="{ThemeResource DashboardGreenBrush}" VerticalAlignment="Center"/>
                                     <TextBlock Grid.Column="1" Text="Troca no próximo logon" FontSize="12" Margin="4,0,8,0" TextWrapping="Wrap" Foreground="{ThemeResource DashboardTitleBrush}"/>
                                     <TextBlock x:Name="LegendMustChangeText" Grid.Column="2" Text="—" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource DashboardTitleBrush}"/>
-                                </Grid>
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="16"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <Ellipse Width="8" Height="8" Fill="#CBD5E1" VerticalAlignment="Center"/>
-                                    <TextBlock Grid.Column="1" Text="Demais contas" FontSize="12" Margin="4,0,8,0" Foreground="{ThemeResource DashboardTitleBrush}"/>
-                                    <TextBlock x:Name="LegendOtherText" Grid.Column="2" Text="—" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource DashboardTitleBrush}"/>
                                 </Grid>
                             </StackPanel>
                         </Grid>
@@ -620,6 +624,5 @@
                     </Grid>
                 </Border>
             </Grid>
-        </Grid>
-    </ScrollViewer>
+    </Grid>
 </Page>
