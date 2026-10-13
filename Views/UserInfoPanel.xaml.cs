@@ -99,7 +99,7 @@ public sealed partial class UserInfoPanel : UserControl
         EmptyStateText.Text     = message;
         EmptyStateText.IsTextSelectionEnabled = false;
         EmptyState.Visibility   = Visibility.Visible;
-        ContentPanel.Visibility = Visibility.Collapsed;
+        ContentScroll.Visibility = Visibility.Collapsed;
     }
 
     public void ShowUser(UserInfo u)
@@ -110,20 +110,22 @@ public sealed partial class UserInfoPanel : UserControl
         EmptyStateText.IsTextSelectionEnabled = false;
 
         // Identidade
-        FullNameText.Text = string.IsNullOrWhiteSpace(u.FullName) ? u.SamAccountName : u.FullName;
+        var nome = string.IsNullOrWhiteSpace(u.FullName) ? u.SamAccountName : u.FullName;
+        FullNameText.Text = nome;
+        AvatarInitialsText.Text = Iniciais(nome);
         SamText.Text      = u.SamAccountName;
         DomainText.Text   = u.Domain;
-        EmailText.Text    = string.IsNullOrWhiteSpace(u.Email) ? "—" : u.Email;
-        PhoneText.Text    = string.IsNullOrWhiteSpace(u.PhoneNumber) ? "—" : u.PhoneNumber;
-        OfficeText.Text   = string.IsNullOrWhiteSpace(u.Office) ? "—" : u.Office;
-        OrganizationalUnitText.Text = string.IsNullOrWhiteSpace(u.OrganizationalUnit) ? "—" : u.OrganizationalUnit;
+        SetValor(EmailText, u.Email);
+        SetValor(PhoneText, u.PhoneNumber);
+        SetValor(OfficeText, u.Office);
+        SetValor(OrganizationalUnitText, u.OrganizationalUnit);
 
         // Status da conta
         SetBadge(ContaAtivaBadge, ContaAtivaIcon, ContaAtivaText,
             u.AccountActive, "Ativa", "Desabilitada",
             positiveGood: true);
 
-        ContaExpiraText.Text = u.AccountExpires;
+        SetValor(ContaExpiraText, u.AccountExpires);
 
         SetBadge(SenhaExpiradaBadge, SenhaExpiradaIcon, SenhaExpiradaText,
             u.PasswordExpired, "Expirada", "Válida",
@@ -134,23 +136,28 @@ public sealed partial class UserInfoPanel : UserControl
             positiveGood: false);
 
         // Senha
-        SenhaDefinidaText.Text = u.PasswordLastSet;
-        SenhaExpiraText.Text   = string.IsNullOrWhiteSpace(u.PasswordExpiresOn)
+        SetValor(SenhaDefinidaText, u.PasswordLastSet);
+        SetValor(SenhaExpiraText, string.IsNullOrWhiteSpace(u.PasswordExpiresOn)
             ? (u.PasswordNeverExpires ? "Nunca" : "Conforme política")
-            : u.PasswordExpiresOn;
-        if (int.TryParse(u.PasswordDaysToExpire, out var diasParaExpirar) && diasParaExpirar < 0)
+            : u.PasswordExpiresOn);
+        if (!int.TryParse(u.PasswordDaysToExpire, out var diasParaExpirar))
+        {
+            DiasParaExpirarLabel.Text = "Faltam (dias) para expirar";
+            SetValor(DiasParaExpirarText, u.PasswordDaysToExpire);
+        }
+        else if (diasParaExpirar < 0)
         {
             DiasParaExpirarLabel.Text = "Vencida há (dias)";
-            DiasParaExpirarText.Text = (-diasParaExpirar).ToString();
+            SetValor(DiasParaExpirarText, (-diasParaExpirar).ToString());
+            DiasParaExpirarText.Foreground = (Brush)Application.Current.Resources["SystemFillColorCriticalBrush"];
         }
         else
         {
             DiasParaExpirarLabel.Text = "Faltam (dias) para expirar";
-            DiasParaExpirarText.Text = string.IsNullOrWhiteSpace(u.PasswordDaysToExpire) ? "—" : u.PasswordDaysToExpire;
+            SetValor(DiasParaExpirarText, diasParaExpirar.ToString());
+            if (diasParaExpirar <= 7)
+                DiasParaExpirarText.Foreground = (Brush)Application.Current.Resources["DashboardOrangeBrush"];
         }
-        BadPasswordCountText.Text = u.BadPasswordCount;
-        BadPasswordTimeText.Text  = u.BadPasswordTime;
-        LockoutTimeText.Text      = string.IsNullOrWhiteSpace(u.LockoutTime) ? "—" : u.LockoutTime;
 
         SetBadge(SenhaAlteravelBadge, SenhaAlteravelIcon, SenhaAlteravelText,
             u.PasswordChangeable, "Permitida", "Bloqueada",
@@ -160,28 +167,36 @@ public sealed partial class UserInfoPanel : UserControl
             u.PasswordRequired, "Obrigatória", "Não obrigatória",
             positiveGood: true);
 
+        SetValor(BadPasswordCountText, u.BadPasswordCount);
+        SetValor(BadPasswordTimeText, u.BadPasswordTime);
+        SetValor(LockoutTimeText, u.LockoutTime);
+
         // Logon
-        UltimoLogonText.Text  = u.LastLogon;
-        UltimoLogoffText.Text = u.LastLogoff;
-        EstacoesText.Text     = u.Workstations;
-        ScriptText.Text       = string.IsNullOrEmpty(u.LogonScript)   ? "—" : u.LogonScript;
-        PerfilText.Text       = string.IsNullOrEmpty(u.ProfilePath)   ? "—" : u.ProfilePath;
-        HomeDirText.Text      = string.IsNullOrEmpty(u.HomeDirectory) ? "—" : u.HomeDirectory;
+        SetValor(UltimoLogonText, u.LastLogon);
+        SetValor(UltimoLogoffText, u.LastLogoff);
+        SetValor(EstacoesText, u.Workstations);
+        SetValor(ScriptText, u.LogonScript);
+        SetValor(PerfilText, u.ProfilePath);
+        SetValor(HomeDirText, u.HomeDirectory);
 
         // Grupos locais
-        LocalGroupsList.ItemsSource = u.LocalGroups.Count > 0
-            ? u.LocalGroups
-            : (IEnumerable<string>)["(nenhum)"];
+        var semLocais = u.LocalGroups.Count == 0;
+        LocalGroupsList.Visibility = semLocais ? Visibility.Collapsed : Visibility.Visible;
+        LocalGroupsEmpty.Visibility = semLocais ? Visibility.Visible : Visibility.Collapsed;
+        if (!semLocais)
+            LocalGroupsList.ItemsSource = u.LocalGroups;
         LocalGroupCountText.Text = u.LocalGroups.Count.ToString();
 
         // Grupos globais
-        GlobalGroupsList.ItemsSource = u.GlobalGroups.Count > 0
-            ? u.GlobalGroups
-            : (IEnumerable<string>)["(nenhum)"];
+        var semGlobais = u.GlobalGroups.Count == 0;
+        GlobalGroupsList.Visibility = semGlobais ? Visibility.Collapsed : Visibility.Visible;
+        GlobalGroupsEmpty.Visibility = semGlobais ? Visibility.Visible : Visibility.Collapsed;
+        if (!semGlobais)
+            GlobalGroupsList.ItemsSource = u.GlobalGroups;
         GlobalGroupCountText.Text = u.GlobalGroups.Count.ToString();
 
-        EmptyState.Visibility   = Visibility.Collapsed;
-        ContentPanel.Visibility = Visibility.Visible;
+        EmptyState.Visibility    = Visibility.Collapsed;
+        ContentScroll.Visibility = Visibility.Visible;
 
         ApplyCopySelectionRules();
     }
@@ -198,23 +213,51 @@ public sealed partial class UserInfoPanel : UserControl
         bool isGood = positiveGood ? value : !value;
 
         label.Text  = value ? trueText : falseText;
-        icon.Glyph  = isGood ? "\uE73E" : "\uE711"; // CheckMark / Cancel
+        icon.Glyph  = isGood ? "\uE73E" : "\uE711";
 
-        if (isGood)
-        {
-            badge.Background   = (Brush)Application.Current.Resources["SystemFillColorSuccessBackgroundBrush"];
-            badge.BorderBrush  = (Brush)Application.Current.Resources["SystemFillColorSuccessBrush"];
-            icon.Foreground    = (Brush)Application.Current.Resources["SystemFillColorSuccessBrush"];
-        }
-        else
-        {
-            badge.Background   = (Brush)Application.Current.Resources["SystemFillColorCriticalBackgroundBrush"];
-            badge.BorderBrush  = (Brush)Application.Current.Resources["SystemFillColorCriticalBrush"];
-            icon.Foreground    = (Brush)Application.Current.Resources["SystemFillColorCriticalBrush"];
-        }
+        var tom = (Brush)Application.Current.Resources[isGood
+            ? "SystemFillColorSuccessBrush"
+            : "SystemFillColorCriticalBrush"];
+        var fundo = (Brush)Application.Current.Resources[isGood
+            ? "SystemFillColorSuccessBackgroundBrush"
+            : "SystemFillColorCriticalBackgroundBrush"];
 
-        badge.BorderThickness = new Thickness(1);
-        badge.CornerRadius    = new CornerRadius(4);
-        badge.Padding         = new Thickness(8, 2, 8, 2);
+        badge.Background = fundo;
+        badge.BorderThickness = new Thickness(0);
+        badge.CornerRadius = new CornerRadius(999);
+        badge.Padding = new Thickness(10, 3, 10, 3);
+        badge.HorizontalAlignment = HorizontalAlignment.Left;
+        icon.Foreground = tom;
+        label.Foreground = tom;
     }
+
+    private static void SetValor(TextBlock campo, string? valor)
+    {
+        var texto = string.IsNullOrWhiteSpace(valor) ? "—" : valor;
+        campo.Text = texto;
+        campo.Foreground = (Brush)Application.Current.Resources[texto == "—"
+            ? "DashboardMutedBrush"
+            : "DashboardTitleBrush"];
+    }
+
+    private static string Iniciais(string nome)
+    {
+        var partes = nome.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var uteis = partes.Where(p => p.Length > 1 && !Particula(p)).ToArray();
+        if (uteis.Length == 0)
+            uteis = partes;
+        if (uteis.Length == 0)
+            return "?";
+        if (uteis.Length == 1)
+            return char.ToUpperInvariant(uteis[0][0]).ToString();
+        return string.Concat(char.ToUpperInvariant(uteis[0][0]), char.ToUpperInvariant(uteis[^1][0]));
+    }
+
+    private static bool Particula(string parte) =>
+        parte.Equals("de", StringComparison.OrdinalIgnoreCase)
+        || parte.Equals("da", StringComparison.OrdinalIgnoreCase)
+        || parte.Equals("do", StringComparison.OrdinalIgnoreCase)
+        || parte.Equals("dos", StringComparison.OrdinalIgnoreCase)
+        || parte.Equals("das", StringComparison.OrdinalIgnoreCase)
+        || parte.Equals("e", StringComparison.OrdinalIgnoreCase);
 }

@@ -9,115 +9,104 @@
     <UserControl.Resources>
         <converters:HighlightedGroupToBrushConverter x:Key="HighlightedGroupToBrush"/>
 
-        <!-- Badge de status: Sim (verde) / Não (vermelho) -->
+        <Style x:Key="UserCardStyle" TargetType="Border" BasedOn="{StaticResource MicaCardStyle}">
+            <Setter Property="Background" Value="{ThemeResource DashboardCardBrush}"/>
+            <Setter Property="BorderBrush" Value="{ThemeResource DashboardCardStrokeBrush}"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="18,16"/>
+        </Style>
+
         <Style x:Key="BadgeSimStyle" TargetType="Border">
-            <Setter Property="Background"     Value="{ThemeResource SystemFillColorSuccessBackgroundBrush}"/>
-            <Setter Property="BorderBrush"    Value="{ThemeResource SystemFillColorSuccessBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius"   Value="4"/>
-            <Setter Property="Padding"        Value="8,2"/>
+            <Setter Property="Background" Value="{ThemeResource SystemFillColorSuccessBackgroundBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CornerRadius" Value="999"/>
+            <Setter Property="Padding" Value="10,3"/>
+            <Setter Property="HorizontalAlignment" Value="Left"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
         <Style x:Key="BadgeNaoStyle" TargetType="Border">
-            <Setter Property="Background"     Value="{ThemeResource SystemFillColorCriticalBackgroundBrush}"/>
-            <Setter Property="BorderBrush"    Value="{ThemeResource SystemFillColorCriticalBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius"   Value="4"/>
-            <Setter Property="Padding"        Value="8,2"/>
+            <Setter Property="Background" Value="{ThemeResource SystemFillColorCriticalBackgroundBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CornerRadius" Value="999"/>
+            <Setter Property="Padding" Value="10,3"/>
+            <Setter Property="HorizontalAlignment" Value="Left"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
         <Style x:Key="BadgeNeutroStyle" TargetType="Border">
-            <Setter Property="Background"     Value="{ThemeResource SubtleFillColorSecondaryBrush}"/>
-            <Setter Property="BorderBrush"    Value="{ThemeResource CardStrokeColorDefaultBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius"   Value="4"/>
-            <Setter Property="Padding"        Value="8,2"/>
+            <Setter Property="Background" Value="{ThemeResource DashboardBadgeGrayBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CornerRadius" Value="999"/>
+            <Setter Property="Padding" Value="8,2"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
 
-        <!-- Chip de grupo -->
         <Style x:Key="GroupChipStyle" TargetType="Border">
-            <Setter Property="Background"     Value="{ThemeResource SubtleFillColorSecondaryBrush}"/>
-            <Setter Property="BorderBrush"    Value="{ThemeResource CardStrokeColorDefaultBrush}"/>
+            <Setter Property="Background" Value="{ThemeResource DashboardBadgeGrayBrush}"/>
+            <Setter Property="BorderBrush" Value="{ThemeResource DashboardCardStrokeBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius"   Value="12"/>
-            <Setter Property="Padding"        Value="10,3"/>
-            <Setter Property="Margin"         Value="0,0,6,6"/>
+            <Setter Property="CornerRadius" Value="999"/>
+            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="Margin" Value="0,0,6,6"/>
         </Style>
 
-        <!-- Label de campo (não copiável; só valores são selecionáveis — ver UserInfoPanel.xaml.cs) -->
         <Style x:Key="FieldLabelStyle" TargetType="TextBlock"
                BasedOn="{StaticResource CaptionTextBlockStyle}">
-            <Setter Property="Foreground"
-                    Value="{ThemeResource TextFillColorSecondaryBrush}"/>
+            <Setter Property="Foreground" Value="{ThemeResource DashboardMutedBrush}"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="IsTextSelectionEnabled" Value="False"/>
+        </Style>
+
+        <Style x:Key="FieldValueStyle" TargetType="TextBlock"
+               BasedOn="{StaticResource BodyTextBlockStyle}">
+            <Setter Property="Foreground" Value="{ThemeResource DashboardTitleBrush}"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="IsTextSelectionEnabled" Value="False"/>
+        </Style>
+
+        <Style x:Key="SectionTitleStyle" TargetType="TextBlock"
+               BasedOn="{StaticResource BodyStrongTextBlockStyle}">
+            <Setter Property="Foreground" Value="{ThemeResource DashboardTitleBrush}"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="IsTextSelectionEnabled" Value="False"/>
         </Style>
-
-        <!-- Valor de campo: seleção é aplicada só nos TextBlocks permitidos em código -->
-        <Style x:Key="FieldValueStyle" TargetType="TextBlock"
-               BasedOn="{StaticResource BodyTextBlockStyle}">
-            <Setter Property="VerticalAlignment"  Value="Center"/>
-            <Setter Property="TextWrapping"       Value="Wrap"/>
-            <Setter Property="IsTextSelectionEnabled" Value="False"/>
-        </Style>
-
     </UserControl.Resources>
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+    <Grid>
         <StackPanel
-            x:Name="RootPanel"
-            Spacing="12"
-            Padding="20,16,20,20">
-
-            <!-- ── ESTADO VAZIO ── -->
-            <StackPanel
-                x:Name="EmptyState"
-                HorizontalAlignment="Center"
-                VerticalAlignment="Center"
-                Spacing="12"
-                Margin="0,60,0,0">
+            x:Name="EmptyState"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            Spacing="8">
+            <Border
+                Width="64" Height="64"
+                CornerRadius="32"
+                Background="{ThemeResource DashboardBadgeGrayBrush}"
+                HorizontalAlignment="Center">
                 <FontIcon
                     Glyph="&#xE77B;"
-                    FontSize="48"
-                    Foreground="{ThemeResource TextFillColorTertiaryBrush}"
-                    HorizontalAlignment="Center"/>
-                <TextBlock
-                    x:Name="EmptyStateText"
-                    Text="Informe um login e clique em Buscar."
-                    Style="{StaticResource BodyTextBlockStyle}"
-                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                    HorizontalAlignment="Center"/>
-            </StackPanel>
+                    FontSize="26"
+                    Foreground="{ThemeResource DashboardMutedBrush}"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"/>
+            </Border>
+            <TextBlock
+                x:Name="EmptyStateText"
+                Text="Informe um login e clique em Buscar."
+                Style="{StaticResource BodyTextBlockStyle}"
+                Foreground="{ThemeResource DashboardMutedBrush}"
+                HorizontalAlignment="Center"
+                TextAlignment="Center"/>
+        </StackPanel>
 
-            <!-- ── CONTEÚDO DO USUÁRIO ── -->
-            <StackPanel x:Name="ContentPanel" Spacing="12" Visibility="Collapsed">
+        <ScrollViewer
+            x:Name="ContentScroll"
+            VerticalScrollBarVisibility="Auto"
+            HorizontalScrollBarVisibility="Disabled"
+            Visibility="Collapsed">
+            <StackPanel x:Name="ContentPanel" Spacing="12" Padding="0,0,0,8">
 
-                <!-- Botão de exportar -->
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
-                    <Button ToolTipService.ToolTip="Exportar dados do usuário">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <FontIcon Glyph="&#xEDE1;" FontSize="14" VerticalAlignment="Center"/>
-                            <TextBlock Text="Exportar" VerticalAlignment="Center"/>
-                        </StackPanel>
-                        <Button.Flyout>
-                            <MenuFlyout>
-                                <MenuFlyoutItem Text="Exportar como TXT (.txt)" Tag="txt" Click="ExportItem_Click">
-                                    <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8A5;"/></MenuFlyoutItem.Icon>
-                                </MenuFlyoutItem>
-                                <MenuFlyoutItem Text="Exportar como DOCX (.docx)" Tag="docx" Click="ExportItem_Click">
-                                    <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8A5;"/></MenuFlyoutItem.Icon>
-                                </MenuFlyoutItem>
-                                <MenuFlyoutItem Text="Exportar como PDF (.pdf)" Tag="pdf" Click="ExportItem_Click">
-                                    <MenuFlyoutItem.Icon><FontIcon Glyph="&#xEA90;"/></MenuFlyoutItem.Icon>
-                                </MenuFlyoutItem>
-                            </MenuFlyout>
-                        </Button.Flyout>
-                    </Button>
-                </StackPanel>
-
-                <!-- CARD: Identidade -->
-                <Border Style="{StaticResource MicaCardStyle}">
+                <Border Style="{StaticResource UserCardStyle}">
                     <Grid RowSpacing="16">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
@@ -125,148 +114,181 @@
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
-                        <!-- Cabeçalho do card -->
-                        <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8">
-                            <FontIcon
-                                Glyph="&#xE77B;"
-                                FontSize="16"
-                                Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
-                                VerticalAlignment="Center"/>
-                            <TextBlock
-                                Text="Identidade"
-                                Style="{StaticResource BodyStrongTextBlockStyle}"
-                                VerticalAlignment="Center"/>
-                        </StackPanel>
+                        <Grid Grid.Row="0">
+                            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                <Border Width="28" Height="28" CornerRadius="8" Background="{ThemeResource DashboardBlueSoftBrush}">
+                                    <FontIcon Glyph="&#xE77B;" FontSize="14" Foreground="{ThemeResource DashboardBlueBrush}"
+                                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <TextBlock Text="Identidade" Style="{StaticResource SectionTitleStyle}"/>
+                            </StackPanel>
+                            <Button HorizontalAlignment="Right" VerticalAlignment="Center"
+                                    ToolTipService.ToolTip="Exportar dados do usuário">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <FontIcon Glyph="&#xEDE1;" FontSize="14" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Exportar" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <Button.Flyout>
+                                    <MenuFlyout>
+                                        <MenuFlyoutItem Text="Exportar como TXT (.txt)" Tag="txt" Click="ExportItem_Click">
+                                            <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8A5;"/></MenuFlyoutItem.Icon>
+                                        </MenuFlyoutItem>
+                                        <MenuFlyoutItem Text="Exportar como DOCX (.docx)" Tag="docx" Click="ExportItem_Click">
+                                            <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8A5;"/></MenuFlyoutItem.Icon>
+                                        </MenuFlyoutItem>
+                                        <MenuFlyoutItem Text="Exportar como PDF (.pdf)" Tag="pdf" Click="ExportItem_Click">
+                                            <MenuFlyoutItem.Icon><FontIcon Glyph="&#xEA90;"/></MenuFlyoutItem.Icon>
+                                        </MenuFlyoutItem>
+                                    </MenuFlyout>
+                                </Button.Flyout>
+                            </Button>
+                        </Grid>
 
-                        <!-- Avatar + dados principais -->
                         <Grid Grid.Row="1" ColumnSpacing="16">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
 
-                            <!-- Avatar circular -->
                             <Border
                                 Grid.Column="0"
-                                Width="56" Height="56"
-                                CornerRadius="28"
+                                Width="64" Height="64"
+                                CornerRadius="32"
                                 Background="{ThemeResource AccentFillColorDefaultBrush}"
-                                VerticalAlignment="Top">
-                                <FontIcon
-                                    Glyph="&#xE77B;"
-                                    FontSize="24"
+                                VerticalAlignment="Center">
+                                <TextBlock
+                                    x:Name="AvatarInitialsText"
+                                    Text="?"
+                                    FontSize="20"
+                                    FontWeight="SemiBold"
                                     Foreground="White"
                                     HorizontalAlignment="Center"
-                                    VerticalAlignment="Center"/>
+                                    VerticalAlignment="Center"
+                                    IsTextSelectionEnabled="False"/>
                             </Border>
 
-                            <!-- Nome e login -->
-                            <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
+                            <StackPanel Grid.Column="1" Spacing="6" VerticalAlignment="Center">
                                 <TextBlock
                                     x:Name="FullNameText"
-                                    Style="{StaticResource SubtitleTextBlockStyle}"
+                                    FontSize="22"
+                                    FontWeight="SemiBold"
+                                    Foreground="{ThemeResource DashboardTitleBrush}"
                                     TextTrimming="CharacterEllipsis"/>
-                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <FontIcon
-                                        Glyph="&#xE716;"
-                                        FontSize="12"
-                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                        VerticalAlignment="Center"/>
-                                    <TextBlock
-                                        x:Name="SamText"
-                                        Style="{StaticResource BodyTextBlockStyle}"
-                                        FontFamily="Cascadia Mono, Consolas"
-                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                                </StackPanel>
-                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <FontIcon
-                                        Glyph="&#xE774;"
-                                        FontSize="12"
-                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                        VerticalAlignment="Center"/>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Border
+                                        Background="{ThemeResource DashboardBadgeGrayBrush}"
+                                        CornerRadius="6"
+                                        Padding="8,2"
+                                        VerticalAlignment="Center">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <FontIcon Glyph="&#xE716;" FontSize="11"
+                                                      Foreground="{ThemeResource DashboardMutedBrush}"
+                                                      VerticalAlignment="Center"/>
+                                            <TextBlock
+                                                x:Name="SamText"
+                                                FontFamily="Cascadia Mono, Consolas"
+                                                FontSize="12"
+                                                Foreground="{ThemeResource DashboardTitleBrush}"
+                                                VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Border>
                                     <TextBlock
                                         x:Name="DomainText"
                                         Style="{StaticResource CaptionTextBlockStyle}"
-                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        Foreground="{ThemeResource DashboardMutedBrush}"
+                                        VerticalAlignment="Center"/>
                                 </StackPanel>
                             </StackPanel>
                         </Grid>
 
-                        <!-- Contatos / Setor / Unidade organizacional -->
-                        <Grid Grid.Row="2" ColumnSpacing="12" RowSpacing="10">
+                        <Grid Grid.Row="2" ColumnSpacing="20" RowSpacing="14" Margin="0,2,0,0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
                             <Grid.RowDefinitions>
-                                <RowDefinition/>
-                                <RowDefinition/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
 
-                            <StackPanel Grid.Row="0" Grid.Column="0" Spacing="4">
+                            <Border Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Height="1"
+                                    Background="{ThemeResource DashboardRowStrokeBrush}"/>
+
+                            <StackPanel Grid.Row="1" Grid.Column="0" Spacing="2">
                                 <TextBlock Text="Email" Style="{StaticResource FieldLabelStyle}"/>
-                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <FontIcon Glyph="&#xE715;" FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
-                                    <TextBlock x:Name="EmailText" Style="{StaticResource FieldValueStyle}"/>
-                                </StackPanel>
+                                <Grid ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <FontIcon Glyph="&#xE715;" FontSize="13" Foreground="{ThemeResource DashboardMutedBrush}" VerticalAlignment="Top" Margin="0,3,0,0"/>
+                                    <TextBlock x:Name="EmailText" Grid.Column="1" Style="{StaticResource FieldValueStyle}"/>
+                                </Grid>
                             </StackPanel>
 
-                            <StackPanel Grid.Row="0" Grid.Column="1" Spacing="4">
+                            <StackPanel Grid.Row="1" Grid.Column="1" Spacing="2">
                                 <TextBlock Text="Ramal" Style="{StaticResource FieldLabelStyle}"/>
-                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <FontIcon Glyph="&#xE717;" FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
-                                    <TextBlock x:Name="PhoneText" Style="{StaticResource FieldValueStyle}"/>
-                                </StackPanel>
+                                <Grid ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <FontIcon Glyph="&#xE717;" FontSize="13" Foreground="{ThemeResource DashboardMutedBrush}" VerticalAlignment="Top" Margin="0,3,0,0"/>
+                                    <TextBlock x:Name="PhoneText" Grid.Column="1" Style="{StaticResource FieldValueStyle}"/>
+                                </Grid>
                             </StackPanel>
 
-                            <StackPanel Grid.Row="1" Grid.Column="0" Spacing="4">
+                            <StackPanel Grid.Row="2" Grid.Column="0" Spacing="2">
                                 <TextBlock Text="Setor" Style="{StaticResource FieldLabelStyle}"/>
-                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <FontIcon Glyph="&#xE80F;" FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
-                                    <TextBlock x:Name="OfficeText" Style="{StaticResource FieldValueStyle}"/>
-                                </StackPanel>
+                                <Grid ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <FontIcon Glyph="&#xE80F;" FontSize="13" Foreground="{ThemeResource DashboardMutedBrush}" VerticalAlignment="Top" Margin="0,3,0,0"/>
+                                    <TextBlock x:Name="OfficeText" Grid.Column="1" Style="{StaticResource FieldValueStyle}"/>
+                                </Grid>
                             </StackPanel>
 
-                            <StackPanel Grid.Row="1" Grid.Column="1" Spacing="4">
+                            <StackPanel Grid.Row="2" Grid.Column="1" Spacing="2">
                                 <TextBlock Text="Unidade organizacional" Style="{StaticResource FieldLabelStyle}"/>
-                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <FontIcon Glyph="&#xE8B7;" FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
-                                    <TextBlock x:Name="OrganizationalUnitText" Style="{StaticResource FieldValueStyle}"/>
-                                </StackPanel>
+                                <Grid ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <FontIcon Glyph="&#xE8B7;" FontSize="13" Foreground="{ThemeResource DashboardMutedBrush}" VerticalAlignment="Top" Margin="0,3,0,0"/>
+                                    <TextBlock x:Name="OrganizationalUnitText" Grid.Column="1" Style="{StaticResource FieldValueStyle}"/>
+                                </Grid>
                             </StackPanel>
                         </Grid>
                     </Grid>
                 </Border>
 
-                <!-- CARD: Status da Conta -->
-                <Border Style="{StaticResource MicaCardStyle}">
-                    <StackPanel Spacing="12">
+                <Border Style="{StaticResource UserCardStyle}">
+                    <StackPanel Spacing="14">
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <FontIcon
-                                Glyph="&#xE8D7;"
-                                FontSize="16"
-                                Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
-                                VerticalAlignment="Center"/>
-                            <TextBlock
-                                Text="Status da conta"
-                                Style="{StaticResource BodyStrongTextBlockStyle}"
-                                VerticalAlignment="Center"/>
+                            <Border Width="28" Height="28" CornerRadius="8" Background="{ThemeResource DashboardGreenSoftBrush}">
+                                <FontIcon Glyph="&#xE8D7;" FontSize="14" Foreground="{ThemeResource DashboardGreenBrush}"
+                                          HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <TextBlock Text="Status da conta" Style="{StaticResource SectionTitleStyle}"/>
                         </StackPanel>
 
-                        <Grid ColumnSpacing="12" RowSpacing="10">
+                        <Grid ColumnSpacing="20" RowSpacing="14">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
                             <Grid.RowDefinitions>
-                                <RowDefinition/>
-                                <RowDefinition/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
 
-                            <!-- Conta ativa -->
                             <StackPanel Grid.Row="0" Grid.Column="0" Spacing="4">
                                 <TextBlock Text="Conta ativa" Style="{StaticResource FieldLabelStyle}"/>
-                                <Border x:Name="ContaAtivaBadge">
+                                <Border x:Name="ContaAtivaBadge" Style="{StaticResource BadgeSimStyle}">
                                     <StackPanel Orientation="Horizontal" Spacing="4">
                                         <FontIcon x:Name="ContaAtivaIcon" FontSize="11" VerticalAlignment="Center"/>
                                         <TextBlock x:Name="ContaAtivaText" Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center"/>
@@ -274,19 +296,14 @@
                                 </Border>
                             </StackPanel>
 
-                            <!-- Conta expira -->
-                            <StackPanel Grid.Row="0" Grid.Column="1" Spacing="4">
+                            <StackPanel Grid.Row="0" Grid.Column="1" Spacing="2">
                                 <TextBlock Text="Conta expira" Style="{StaticResource FieldLabelStyle}"/>
-                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <FontIcon Glyph="&#xE787;" FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
-                                    <TextBlock x:Name="ContaExpiraText" Style="{StaticResource FieldValueStyle}"/>
-                                </StackPanel>
+                                <TextBlock x:Name="ContaExpiraText" Style="{StaticResource FieldValueStyle}"/>
                             </StackPanel>
 
-                            <!-- Senha expirada -->
                             <StackPanel Grid.Row="1" Grid.Column="0" Spacing="4">
                                 <TextBlock Text="Senha expirada" Style="{StaticResource FieldLabelStyle}"/>
-                                <Border x:Name="SenhaExpiradaBadge">
+                                <Border x:Name="SenhaExpiradaBadge" Style="{StaticResource BadgeSimStyle}">
                                     <StackPanel Orientation="Horizontal" Spacing="4">
                                         <FontIcon x:Name="SenhaExpiradaIcon" FontSize="11" VerticalAlignment="Center"/>
                                         <TextBlock x:Name="SenhaExpiradaText" Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center"/>
@@ -294,10 +311,9 @@
                                 </Border>
                             </StackPanel>
 
-                            <!-- Requer smartcard -->
                             <StackPanel Grid.Row="1" Grid.Column="1" Spacing="4">
                                 <TextBlock Text="Requer smartcard" Style="{StaticResource FieldLabelStyle}"/>
-                                <Border x:Name="SmartcardBadge">
+                                <Border x:Name="SmartcardBadge" Style="{StaticResource BadgeSimStyle}">
                                     <StackPanel Orientation="Horizontal" Spacing="4">
                                         <FontIcon x:Name="SmartcardIcon" FontSize="11" VerticalAlignment="Center"/>
                                         <TextBlock x:Name="SmartcardText" Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center"/>
@@ -308,59 +324,51 @@
                     </StackPanel>
                 </Border>
 
-                <!-- CARD: Senha -->
-                <Border Style="{StaticResource MicaCardStyle}">
-                    <StackPanel Spacing="12">
+                <Border Style="{StaticResource UserCardStyle}">
+                    <StackPanel Spacing="14">
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <FontIcon
-                                Glyph="&#xE8D7;"
-                                FontSize="16"
-                                Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
-                                VerticalAlignment="Center"/>
-                            <TextBlock
-                                Text="Senha"
-                                Style="{StaticResource BodyStrongTextBlockStyle}"
-                                VerticalAlignment="Center"/>
+                            <Border Width="28" Height="28" CornerRadius="8" Background="{ThemeResource DashboardOrangeSoftBrush}">
+                                <FontIcon Glyph="&#xE72E;" FontSize="14" Foreground="{ThemeResource DashboardOrangeBrush}"
+                                          HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <TextBlock Text="Senha" Style="{StaticResource SectionTitleStyle}"/>
                         </StackPanel>
 
-                        <Grid ColumnSpacing="12" RowSpacing="10">
+                        <Grid ColumnSpacing="20" RowSpacing="14">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
                             <Grid.RowDefinitions>
-                                <RowDefinition/>
-                                <RowDefinition/>
-                                <RowDefinition/>
-                                <RowDefinition/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
 
-                            <StackPanel Grid.Row="0" Grid.Column="0" Spacing="4">
+                            <StackPanel Grid.Row="0" Grid.Column="0" Spacing="2">
                                 <TextBlock Text="Definida pela última vez" Style="{StaticResource FieldLabelStyle}"/>
-                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <FontIcon Glyph="&#xE787;" FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
-                                    <TextBlock x:Name="SenhaDefinidaText" Style="{StaticResource FieldValueStyle}"/>
-                                </StackPanel>
+                                <TextBlock x:Name="SenhaDefinidaText" Style="{StaticResource FieldValueStyle}"/>
                             </StackPanel>
 
-                            <StackPanel Grid.Row="0" Grid.Column="1" Spacing="4">
+                            <StackPanel Grid.Row="0" Grid.Column="1" Spacing="2">
                                 <TextBlock Text="Expira" Style="{StaticResource FieldLabelStyle}"/>
                                 <TextBlock x:Name="SenhaExpiraText" Style="{StaticResource FieldValueStyle}"/>
                             </StackPanel>
 
-                            <StackPanel Grid.Row="1" Grid.Column="0" Spacing="4">
+                            <StackPanel Grid.Row="1" Grid.Column="0" Spacing="2">
                                 <TextBlock x:Name="DiasParaExpirarLabel" Text="Faltam (dias) para expirar" Style="{StaticResource FieldLabelStyle}"/>
                                 <TextBlock x:Name="DiasParaExpirarText" Style="{StaticResource FieldValueStyle}"/>
                             </StackPanel>
 
-                            <StackPanel Grid.Row="1" Grid.Column="1" Spacing="4">
+                            <StackPanel Grid.Row="1" Grid.Column="1" Spacing="2">
                                 <TextBlock Text="Bloqueio em (lockout)" Style="{StaticResource FieldLabelStyle}"/>
                                 <TextBlock x:Name="LockoutTimeText" Style="{StaticResource FieldValueStyle}"/>
                             </StackPanel>
 
                             <StackPanel Grid.Row="2" Grid.Column="0" Spacing="4">
                                 <TextBlock Text="Pode ser alterada" Style="{StaticResource FieldLabelStyle}"/>
-                                <Border x:Name="SenhaAlteravelBadge">
+                                <Border x:Name="SenhaAlteravelBadge" Style="{StaticResource BadgeSimStyle}">
                                     <StackPanel Orientation="Horizontal" Spacing="4">
                                         <FontIcon x:Name="SenhaAlteravelIcon" FontSize="11" VerticalAlignment="Center"/>
                                         <TextBlock x:Name="SenhaAlteravelText" Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center"/>
@@ -370,7 +378,7 @@
 
                             <StackPanel Grid.Row="2" Grid.Column="1" Spacing="4">
                                 <TextBlock Text="Obrigatória" Style="{StaticResource FieldLabelStyle}"/>
-                                <Border x:Name="SenhaObrigBadge">
+                                <Border x:Name="SenhaObrigBadge" Style="{StaticResource BadgeSimStyle}">
                                     <StackPanel Orientation="Horizontal" Spacing="4">
                                         <FontIcon x:Name="SenhaObrigIcon" FontSize="11" VerticalAlignment="Center"/>
                                         <TextBlock x:Name="SenhaObrigText" Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center"/>
@@ -378,12 +386,12 @@
                                 </Border>
                             </StackPanel>
 
-                            <StackPanel Grid.Row="3" Grid.Column="0" Spacing="4">
+                            <StackPanel Grid.Row="3" Grid.Column="0" Spacing="2">
                                 <TextBlock Text="Tentativas de senha inválida" Style="{StaticResource FieldLabelStyle}"/>
                                 <TextBlock x:Name="BadPasswordCountText" Style="{StaticResource FieldValueStyle}"/>
                             </StackPanel>
 
-                            <StackPanel Grid.Row="3" Grid.Column="1" Spacing="4">
+                            <StackPanel Grid.Row="3" Grid.Column="1" Spacing="2">
                                 <TextBlock Text="Última tentativa de senha inválida" Style="{StaticResource FieldLabelStyle}"/>
                                 <TextBlock x:Name="BadPasswordTimeText" Style="{StaticResource FieldValueStyle}"/>
                             </StackPanel>
@@ -391,97 +399,83 @@
                     </StackPanel>
                 </Border>
 
-                <!-- CARD: Logon -->
-                <Border Style="{StaticResource MicaCardStyle}">
-                    <StackPanel Spacing="12">
+                <Border Style="{StaticResource UserCardStyle}">
+                    <StackPanel Spacing="14">
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <FontIcon
-                                Glyph="&#xE8AF;"
-                                FontSize="16"
-                                Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
-                                VerticalAlignment="Center"/>
-                            <TextBlock
-                                Text="Logon"
-                                Style="{StaticResource BodyStrongTextBlockStyle}"
-                                VerticalAlignment="Center"/>
+                            <Border Width="28" Height="28" CornerRadius="8" Background="{ThemeResource DashboardPurpleSoftBrush}">
+                                <FontIcon Glyph="&#xE8AF;" FontSize="14" Foreground="{ThemeResource DashboardPurpleBrush}"
+                                          HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <TextBlock Text="Logon" Style="{StaticResource SectionTitleStyle}"/>
                         </StackPanel>
 
-                        <Grid ColumnSpacing="12" RowSpacing="10">
+                        <Grid ColumnSpacing="20" RowSpacing="14">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
                             <Grid.RowDefinitions>
-                                <RowDefinition/>
-                                <RowDefinition/>
-                                <RowDefinition/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
 
-                            <StackPanel Grid.Row="0" Grid.Column="0" Spacing="4">
+                            <StackPanel Grid.Row="0" Grid.Column="0" Spacing="2">
                                 <TextBlock Text="Último logon no domínio" Style="{StaticResource FieldLabelStyle}"/>
-                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <FontIcon Glyph="&#xE787;" FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
-                                    <TextBlock x:Name="UltimoLogonText" Style="{StaticResource FieldValueStyle}"/>
-                                </StackPanel>
+                                <TextBlock x:Name="UltimoLogonText" Style="{StaticResource FieldValueStyle}"/>
                             </StackPanel>
 
-                            <StackPanel Grid.Row="0" Grid.Column="1" Spacing="4">
+                            <StackPanel Grid.Row="0" Grid.Column="1" Spacing="2">
                                 <TextBlock Text="Último logoff" Style="{StaticResource FieldLabelStyle}"/>
-                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <FontIcon Glyph="&#xE787;" FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
-                                    <TextBlock x:Name="UltimoLogoffText" Style="{StaticResource FieldValueStyle}"/>
-                                </StackPanel>
+                                <TextBlock x:Name="UltimoLogoffText" Style="{StaticResource FieldValueStyle}"/>
                             </StackPanel>
 
-                            <StackPanel Grid.Row="1" Grid.Column="0" Spacing="4">
+                            <StackPanel Grid.Row="1" Grid.Column="0" Spacing="2">
                                 <TextBlock Text="Estações permitidas" Style="{StaticResource FieldLabelStyle}"/>
-                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <FontIcon Glyph="&#xE7F8;" FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
-                                    <TextBlock x:Name="EstacoesText" Style="{StaticResource FieldValueStyle}"/>
-                                </StackPanel>
+                                <TextBlock x:Name="EstacoesText" Style="{StaticResource FieldValueStyle}"/>
                             </StackPanel>
 
-                            <StackPanel Grid.Row="1" Grid.Column="1" Spacing="4">
+                            <StackPanel Grid.Row="1" Grid.Column="1" Spacing="2">
                                 <TextBlock Text="Script de logon" Style="{StaticResource FieldLabelStyle}"/>
-                                <TextBlock x:Name="ScriptText" Style="{StaticResource FieldValueStyle}" FontFamily="Cascadia Mono, Consolas" FontSize="12"/>
+                                <TextBlock x:Name="ScriptText" Style="{StaticResource FieldValueStyle}" FontFamily="Cascadia Mono, Consolas" FontSize="13"/>
                             </StackPanel>
 
-                            <StackPanel Grid.Row="2" Grid.Column="0" Spacing="4">
+                            <StackPanel Grid.Row="2" Grid.Column="0" Spacing="2">
                                 <TextBlock Text="Perfil do usuário" Style="{StaticResource FieldLabelStyle}"/>
-                                <TextBlock x:Name="PerfilText" Style="{StaticResource FieldValueStyle}" FontFamily="Cascadia Mono, Consolas" FontSize="12"/>
+                                <TextBlock x:Name="PerfilText" Style="{StaticResource FieldValueStyle}" FontFamily="Cascadia Mono, Consolas" FontSize="13"/>
                             </StackPanel>
 
-                            <StackPanel Grid.Row="2" Grid.Column="1" Spacing="4">
+                            <StackPanel Grid.Row="2" Grid.Column="1" Spacing="2">
                                 <TextBlock Text="Diretório base" Style="{StaticResource FieldLabelStyle}"/>
-                                <TextBlock x:Name="HomeDirText" Style="{StaticResource FieldValueStyle}" FontFamily="Cascadia Mono, Consolas" FontSize="12"/>
+                                <TextBlock x:Name="HomeDirText" Style="{StaticResource FieldValueStyle}" FontFamily="Cascadia Mono, Consolas" FontSize="13"/>
                             </StackPanel>
                         </Grid>
                     </StackPanel>
                 </Border>
 
-                <!-- CARD: Grupos Locais -->
-                <Border Style="{StaticResource MicaCardStyle}">
+                <Border Style="{StaticResource UserCardStyle}">
                     <StackPanel Spacing="12">
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <FontIcon
-                                Glyph="&#xE902;"
-                                FontSize="16"
-                                Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
-                                VerticalAlignment="Center"/>
-                            <TextBlock
-                                Text="Grupos locais"
-                                Style="{StaticResource BodyStrongTextBlockStyle}"
-                                VerticalAlignment="Center"/>
-                            <Border
-                                x:Name="LocalGroupCountBadge"
-                                Style="{StaticResource BadgeNeutroStyle}">
-                                <TextBlock x:Name="LocalGroupCountText" Style="{StaticResource CaptionTextBlockStyle}"/>
+                            <Border Width="28" Height="28" CornerRadius="8" Background="{ThemeResource DashboardBadgeGrayBrush}">
+                                <FontIcon Glyph="&#xE902;" FontSize="14" Foreground="{ThemeResource DashboardMutedBrush}"
+                                          HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <TextBlock Text="Grupos locais" Style="{StaticResource SectionTitleStyle}"/>
+                            <Border x:Name="LocalGroupCountBadge" Style="{StaticResource BadgeNeutroStyle}">
+                                <TextBlock x:Name="LocalGroupCountText" Style="{StaticResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource DashboardTitleBrush}" FontWeight="SemiBold"/>
                             </Border>
                         </StackPanel>
+                        <TextBlock
+                            x:Name="LocalGroupsEmpty"
+                            Text="Nenhum grupo local."
+                            Style="{StaticResource CaptionTextBlockStyle}"
+                            Foreground="{ThemeResource DashboardMutedBrush}"
+                            Visibility="Collapsed"/>
                         <ItemsControl x:Name="LocalGroupsList">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
-                                    <ItemsWrapGrid Orientation="Horizontal" MaximumRowsOrColumns="20"/>
+                                    <ItemsWrapGrid Orientation="Horizontal"/>
                                 </ItemsPanelTemplate>
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
@@ -489,14 +483,9 @@
                                     <Border Style="{StaticResource GroupChipStyle}"
                                             BorderBrush="{Binding Converter={StaticResource HighlightedGroupToBrush}}"
                                             ToolTipService.ToolTip="{Binding}">
-                                        <StackPanel Orientation="Horizontal" Spacing="5">
-                                            <FontIcon Glyph="&#xE716;" FontSize="10"
-                                                      Foreground="{Binding Converter={StaticResource HighlightedGroupToBrush}, ConverterParameter=Text}"
-                                                      VerticalAlignment="Center"/>
-                                            <TextBlock Text="{Binding}"
-                                                       Style="{StaticResource CaptionTextBlockStyle}"
-                                                       Foreground="{Binding Converter={StaticResource HighlightedGroupToBrush}, ConverterParameter=Text}"/>
-                                        </StackPanel>
+                                        <TextBlock Text="{Binding}"
+                                                   Style="{StaticResource CaptionTextBlockStyle}"
+                                                   Foreground="{Binding Converter={StaticResource HighlightedGroupToBrush}, ConverterParameter=Text}"/>
                                     </Border>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
@@ -504,29 +493,29 @@
                     </StackPanel>
                 </Border>
 
-                <!-- CARD: Grupos Globais -->
-                <Border Style="{StaticResource MicaCardStyle}">
+                <Border Style="{StaticResource UserCardStyle}">
                     <StackPanel Spacing="12">
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <FontIcon
-                                Glyph="&#xE774;"
-                                FontSize="16"
-                                Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
-                                VerticalAlignment="Center"/>
-                            <TextBlock
-                                Text="Grupos globais"
-                                Style="{StaticResource BodyStrongTextBlockStyle}"
-                                VerticalAlignment="Center"/>
-                            <Border
-                                x:Name="GlobalGroupCountBadge"
-                                Style="{StaticResource BadgeNeutroStyle}">
-                                <TextBlock x:Name="GlobalGroupCountText" Style="{StaticResource CaptionTextBlockStyle}"/>
+                            <Border Width="28" Height="28" CornerRadius="8" Background="{ThemeResource DashboardBlueSoftBrush}">
+                                <FontIcon Glyph="&#xE774;" FontSize="14" Foreground="{ThemeResource DashboardBlueBrush}"
+                                          HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <TextBlock Text="Grupos globais" Style="{StaticResource SectionTitleStyle}"/>
+                            <Border x:Name="GlobalGroupCountBadge" Style="{StaticResource BadgeNeutroStyle}">
+                                <TextBlock x:Name="GlobalGroupCountText" Style="{StaticResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource DashboardTitleBrush}" FontWeight="SemiBold"/>
                             </Border>
                         </StackPanel>
+                        <TextBlock
+                            x:Name="GlobalGroupsEmpty"
+                            Text="Nenhum grupo global."
+                            Style="{StaticResource CaptionTextBlockStyle}"
+                            Foreground="{ThemeResource DashboardMutedBrush}"
+                            Visibility="Collapsed"/>
                         <ItemsControl x:Name="GlobalGroupsList">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
-                                    <ItemsWrapGrid Orientation="Horizontal" MaximumRowsOrColumns="20"/>
+                                    <ItemsWrapGrid Orientation="Horizontal"/>
                                 </ItemsPanelTemplate>
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
@@ -534,14 +523,9 @@
                                     <Border Style="{StaticResource GroupChipStyle}"
                                             BorderBrush="{Binding Converter={StaticResource HighlightedGroupToBrush}}"
                                             ToolTipService.ToolTip="{Binding}">
-                                        <StackPanel Orientation="Horizontal" Spacing="5">
-                                            <FontIcon Glyph="&#xE774;" FontSize="10"
-                                                      Foreground="{Binding Converter={StaticResource HighlightedGroupToBrush}, ConverterParameter=Text}"
-                                                      VerticalAlignment="Center"/>
-                                            <TextBlock Text="{Binding}"
-                                                       Style="{StaticResource CaptionTextBlockStyle}"
-                                                       Foreground="{Binding Converter={StaticResource HighlightedGroupToBrush}, ConverterParameter=Text}"/>
-                                        </StackPanel>
+                                        <TextBlock Text="{Binding}"
+                                                   Style="{StaticResource CaptionTextBlockStyle}"
+                                                   Foreground="{Binding Converter={StaticResource HighlightedGroupToBrush}, ConverterParameter=Text}"/>
                                     </Border>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
@@ -550,7 +534,7 @@
                 </Border>
 
             </StackPanel>
-        </StackPanel>
-    </ScrollViewer>
+        </ScrollViewer>
+    </Grid>
 
 </UserControl>
